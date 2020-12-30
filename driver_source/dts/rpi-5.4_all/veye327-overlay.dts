@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Definitions for VEYE327 camera module on VC I2C bus
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/{
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c_csi_dsi>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			veye327: veye327@3b {
+				compatible = "veye,veye327";
+				reg = <0x3b>;
+				status = "okay";
+
+				clocks = <&veye327_clk>;
+				clock-names = "xclk";
+
+				VANA-supply = <&veye327_vana>;	/* 2.8v */
+				VDIG-supply = <&veye327_vdig>;	/* 1.8v */
+				VDDL-supply = <&veye327_vddl>;	/* 1.2v */
+				rotation = <0>;
+
+				port {
+					veye327_0: endpoint {
+						remote-endpoint = <&csi1_ep>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						clock-noncontinuous;
+						link-frequencies =
+							/bits/ 64 <297000000>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&csi1>;
+		__overlay__ {
+			status = "okay";
+
+			port {
+				csi1_ep: endpoint {
+					remote-endpoint = <&veye327_0>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					clock-noncontinuous;
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@3 {
+		target-path="/";
+		__overlay__ {
+			veye327_vana: fixedregulator@0 {
+				compatible = "regulator-fixed";
+				regulator-name = "veye327_vana";
+				regulator-min-microvolt = <2800000>;
+				regulator-max-microvolt = <2800000>;
+				gpio = <&gpio 41 GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+			};
+			veye327_vdig: fixedregulator@1 {
+				compatible = "regulator-fixed";
+				regulator-name = "veye327_vdig";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+			};
+			veye327_vddl: fixedregulator@2 {
+				compatible = "regulator-fixed";
+				regulator-name = "veye327_vddl";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+			};
+
+			veye327_clk: camera-clk {
+				compatible = "fixed-clock";
+				#clock-cells = <0>;
+				clock-frequency = <24000000>;
+			};
+		};
+	};
+
+	fragment@4 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@5 {
+		target-path="/__overrides__";
+		__overlay__ {
+			cam0-pwdn-ctrl = <&veye327_vana>,"gpio:0";
+			cam0-pwdn      = <&veye327_vana>,"gpio:4";
+		};
+	};
+
+	__overrides__ {
+		rotation = <&veye327>,"rotation:0";
+	};
+};
