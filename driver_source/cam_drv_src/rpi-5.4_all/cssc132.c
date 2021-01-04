@@ -836,7 +836,7 @@ static int cssc132_identify_module(struct cssc132 *cssc132)
 	if (cameraid == CS_MIPI_GS132) 
     {
         err = 0;
-        dev_err(&client->dev, " camera id is cs-mipi-imx307\n");
+        dev_err(&client->dev, " camera id is cs-mipi-sc132\n");
     }
     else
     {
