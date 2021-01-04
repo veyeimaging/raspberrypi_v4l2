@@ -600,6 +600,28 @@ config VIDEO_VEYE327
 	  To compile this driver as a module, choose M here: the
 	  module will be called veye327.
 
+config VIDEO_CSIMX307
+	tristate "Sony csimx307 sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  csimx307 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called csimx307.
+
+config VIDEO_CSSC132
+	tristate " CS_SC132 sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the VEYE
+	  CSSC132 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cssc132.
+
 config VIDEO_IMX258
 	tristate "Sony IMX258 sensor support"
 	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API

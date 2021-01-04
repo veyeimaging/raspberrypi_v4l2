@@ -121,4 +121,6 @@ obj-$(CONFIG_VIDEO_IMX319)	+= imx319.o
 obj-$(CONFIG_VIDEO_IMX355)	+= imx355.o
 obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
 obj-$(CONFIG_VIDEO_VEYE327)	+= veye327.o
+obj-$(CONFIG_VIDEO_CSIMX307)	+= csimx307.o
+obj-$(CONFIG_VIDEO_CSSC132)	+= cssc132.o
 obj-$(CONFIG_SDR_MAX2175) += max2175.o

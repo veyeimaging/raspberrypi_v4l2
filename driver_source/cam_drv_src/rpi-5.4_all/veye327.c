@@ -32,7 +32,7 @@
 
 #define SENSOR_NAME "veye327"
 
-#define DEBUG_PRINTK
+//#define DEBUG_PRINTK
 #ifndef DEBUG_PRINTK
 #define debug_printk(s , ... )
 #define VEYE_TRACE 
