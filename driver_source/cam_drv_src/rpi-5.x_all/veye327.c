@@ -616,7 +616,8 @@ static int veye327_identify_module(struct veye327 *veye327)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&veye327->sd);
 	int ret;
-	u32 val;
+	//u32 val;
+    int err;
     u8 device_id;
     VEYE_TRACE
 	ret = veye327_read_reg(veye327, VEYE327_MODEL_ID_ADDR, &device_id);
@@ -624,13 +625,19 @@ static int veye327_identify_module(struct veye327 *veye327)
 		dev_err(&client->dev, "probe failed\n");
 		return -ENODEV;
 	}
-	if (device_id != VEYE327_DEVICE_ID) {
-		dev_err(&client->dev, "chip id mismatch: %x!=%x\n",
-			VEYE327_DEVICE_ID, val);
-		return -EIO;
-	}
+    if (device_id == VEYE327_DEVICE_ID) 
+    {
+        err = 0;
+        dev_err(&client->dev, " camera id is veye327\n");
+    }
+    else
+    {
+        err = -ENODEV;
+		dev_err(&client->dev, "%s: invalid sensor model id: %d\n",
+			__func__, device_id);
+    }
 
-	return 0;
+	return err;
 }
 
 /*static const struct v4l2_subdev_core_ops veye327_core_ops = {
@@ -912,7 +919,8 @@ static int veye327_probe(struct i2c_client *client)
 	//pm_runtime_set_active(&client->dev);
 	//pm_runtime_enable(&client->dev);
 	//pm_runtime_idle(&client->dev);
-    debug_printk("veye327 camera probed\n");
+    //debug_printk("veye327 camera probed\n");
+    dev_err(&client->dev, "veye327 camera probed\n");
 	return 0;
 
 error_media_entity:
