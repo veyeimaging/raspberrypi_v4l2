@@ -166,14 +166,14 @@ static struct cssc132_reg cssc132_start_regs[] = {
 	{CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_START},
     {Csi2_Enable,0x01},
 	{CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00 }
+	//{CSSC132_TABLE_END, 0x00 }
 };
 
 static struct cssc132_reg cssc132_stop_regs[] = {
 	{CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STOP},
     {Csi2_Enable,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_CMD},
-	{CSSC132_TABLE_END, 0x00 }
+	//{CSSC132_TABLE_END, 0x00 }
 };
 
 static struct cssc132_reg sc132_reg_1280x1080_45fps[] = {
@@ -186,7 +186,7 @@ static struct cssc132_reg sc132_reg_1280x1080_45fps[] = {
     {FMT_FRAMRAT_L,0x2D},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 
 static struct cssc132_reg sc132_reg_1080x1280_45fps[] = {
@@ -199,7 +199,7 @@ static struct cssc132_reg sc132_reg_1080x1280_45fps[] = {
     {FMT_FRAMRAT_L,0x2D},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 
 static struct cssc132_reg sc132_reg_1280x720_crop_60fps[] = {
@@ -212,7 +212,7 @@ static struct cssc132_reg sc132_reg_1280x720_crop_60fps[] = {
     {FMT_FRAMRAT_L,0x3C},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 
 static struct cssc132_reg sc132_reg_720x1280_crop_60fps[] = {
@@ -225,7 +225,7 @@ static struct cssc132_reg sc132_reg_720x1280_crop_60fps[] = {
     {FMT_FRAMRAT_L,0x3C},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 
 static struct cssc132_reg sc132_reg_640x480_crop_120fps[] = {
@@ -238,7 +238,7 @@ static struct cssc132_reg sc132_reg_640x480_crop_120fps[] = {
     {FMT_FRAMRAT_L,0x78},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 static struct cssc132_reg sc132_reg_480x640_crop_120fps[] = {
     {FMT_WIDTH_L,0xE0},
@@ -250,7 +250,7 @@ static struct cssc132_reg sc132_reg_480x640_crop_120fps[] = {
     {FMT_FRAMRAT_L,0x78},
     {FMT_FRAMRAT_H,0x00},
     {CSSC132_TABLE_WAIT_MS, CSSC132_WAIT_MS_STREAM},
-	{CSSC132_TABLE_END, 0x00}
+	//{CSSC132_TABLE_END, 0x00}
 };
 #if 1
 /* regulator supplies */

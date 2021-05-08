@@ -163,14 +163,14 @@ static struct csimx307_reg csimx307_start_regs[] = {
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_START},
     {Csi2_Enable,0x01},
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STREAM},
-	{CS307_TABLE_END, 0x00 }
+	//{CS307_TABLE_END, 0x00 }
 };
 
 static struct csimx307_reg csimx307_stop_regs[] = {
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STOP},
     {Csi2_Enable,0x00},
     {CS307_TABLE_WAIT_MS, CS307_WAIT_MS_CMD},
-	{CS307_TABLE_END, 0x00 }
+	//{CS307_TABLE_END, 0x00 }
 };
 
 static struct csimx307_reg mode_1920_1080_30_regs[] = {
@@ -183,7 +183,7 @@ static struct csimx307_reg mode_1920_1080_30_regs[] = {
     {FMT_FRAMRAT_L,0x1E},
     {FMT_FRAMRAT_H,0x00},
     {CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STREAM},
-	{CS307_TABLE_END, 0x00}
+	//{CS307_TABLE_END, 0x00}
 };
 
 static struct csimx307_reg mode_1280_720_60_crop_regs[] = {
@@ -196,7 +196,7 @@ static struct csimx307_reg mode_1280_720_60_crop_regs[] = {
     {FMT_FRAMRAT_L,0x3C},
     {FMT_FRAMRAT_H,0x00},
     {CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STREAM},
-	{CS307_TABLE_END, 0x00}
+	//{CS307_TABLE_END, 0x00}
 };
 
 static struct csimx307_reg mode_640_480_130_crop_regs[] = {
@@ -209,7 +209,7 @@ static struct csimx307_reg mode_640_480_130_crop_regs[] = {
     {FMT_FRAMRAT_L,0x82},
     {FMT_FRAMRAT_H,0x00},
     {CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STREAM},
-	{CS307_TABLE_END, 0x00}
+	//{CS307_TABLE_END, 0x00}
 };
 
 #if 1
@@ -362,11 +362,14 @@ static int csimx307_write_regs(struct csimx307 *csimx307,
 	struct i2c_client *client = v4l2_get_subdevdata(&csimx307->sd);
 	unsigned int i;
 	int ret;
-
+    debug_printk("csimx307_write_regs len %d \n", len);
 	for (i = 0; i < len; i++) {
-        if(regs[i].address == CS307_TABLE_WAIT_MS)
+        if(regs[i].address == CS307_TABLE_WAIT_MS){
+            debug_printk("msleep %d \n", regs[i].val);
             msleep(regs[i].val);
+        }
         else{
+            debug_printk("csimx307_write_reg addr 0x%x val 0x%d \n", regs[i].address, regs[i].val);
             ret = csimx307_write_reg(csimx307, regs[i].address, regs[i].val);
             if (ret) {
                 dev_err_ratelimited(&client->dev,
@@ -552,21 +555,21 @@ static int csimx307_set_pad_format(struct v4l2_subdev *sd,
     
 	mutex_lock(&csimx307->mutex);
 
-	//debug_printk(" %s\n",__func__);
+	VEYE_TRACE
 	
-        for(mode=0;mode<ARRAY_SIZE(supported_modes);mode++) {
-           if((fmt->format.width==supported_modes[mode].width)&&
-                   (fmt->format.height==supported_modes[mode].height)){
-                     new_mode = &supported_modes[mode];
-                     flag=1;
-                     break;
-            }
-         }
-         if(flag==0){
-           ret = -EINVAL;
-           goto error;
-         }
-
+    for(mode=0;mode<ARRAY_SIZE(supported_modes);mode++) {
+       if((fmt->format.width==supported_modes[mode].width)&&
+               (fmt->format.height==supported_modes[mode].height)){
+                 new_mode = &supported_modes[mode];
+                 flag=1;
+                 break;
+        }
+     }
+     if(flag==0){
+       ret = -EINVAL;
+       goto error;
+     }
+    debug_printk("set format  %d ,width %d ,height %d \n", mode,new_mode->width,new_mode->height);
 	fmt->format.code = MEDIA_BUS_FMT_UYVY8_2X8;
 	fmt->format.width = new_mode->width;
 	fmt->format.height = new_mode->height;
@@ -942,9 +945,9 @@ static int csimx307_check_hwcfg(struct device *dev)
 	struct v4l2_fwnode_endpoint ep_cfg = {
 		.bus_type = V4L2_MBUS_CSI2_DPHY
 	};
-    VEYE_TRACE
+    
 	int ret = -EINVAL;
-
+    VEYE_TRACE
 	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
 	if (!endpoint) {
 		dev_err(dev, "endpoint node not found\n");
