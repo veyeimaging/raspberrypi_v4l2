@@ -54,9 +54,14 @@
 #define VEYE327_XCLR_MIN_DELAY_US	6000
 #define VEYE327_XCLR_DELAY_RANGE_US	1000
 
-/* veye327 sensor register address */
+/* veye327 model register address */
 #define VEYE327_MODEL_ID_ADDR		0x0001
 #define VEYE327_DEVICE_ID 		0x06
+
+#define SENSOR_TYPR_ADDR_L    0x20
+#define SENSOR_TYPR_ADDR_H    0x21
+
+#define BOARD_TYPR_ADDR    0x25
 
 /* registers */
 #define VEYECAM_STREAMING_ON    0x001D
@@ -611,6 +616,42 @@ static int veye327_get_regulators(struct veye327 *veye327)
 				       veye327->supplies);
 }
 
+static int veye327_read_model(struct veye327 *veye327)
+{
+    struct i2c_client *client = v4l2_get_subdevdata(&veye327->sd);
+	int ret;
+    u8 snr_l;
+    u8 snr_h;
+    u8 board_no;
+    ret = veye327_read_reg(veye327, SENSOR_TYPR_ADDR_L, &snr_l);
+	if (ret) {
+		dev_err(&client->dev, "probe failed \n");
+		return -ENODEV;
+	}
+    ret = veye327_read_reg(veye327, SENSOR_TYPR_ADDR_H, &snr_h);
+	if (ret) {
+		dev_err(&client->dev, "probe failed \n");
+		return -ENODEV;
+	}
+    ret = veye327_read_reg(veye327, BOARD_TYPR_ADDR, &board_no);
+	if (ret) {
+		dev_err(&client->dev, "probe failed \n");
+		return -ENODEV;
+	}
+    if(snr_l == 0x03 && snr_h == 0x27){
+        dev_err(&client->dev, "sensor is IMX327\n");
+    }
+    else if(snr_l == 0x04 && snr_h == 0x62){
+        dev_err(&client->dev, "sensor is IMX462\n");
+    }
+     if(board_no == 0x4C){
+        dev_err(&client->dev, "board type is ONE board\n");
+    }else{
+        dev_err(&client->dev, "board type is TWO board\n");
+    }
+    return 0;
+}
+
 /* Verify chip ID */
 static int veye327_identify_module(struct veye327 *veye327)
 {
@@ -622,7 +663,7 @@ static int veye327_identify_module(struct veye327 *veye327)
     VEYE_TRACE
 	ret = veye327_read_reg(veye327, VEYE327_MODEL_ID_ADDR, &device_id);
 	if (ret) {
-		dev_err(&client->dev, "probe failed\n");
+		dev_err(&client->dev, "probe failed \n");
 		return -ENODEV;
 	}
     if (device_id == VEYE327_DEVICE_ID) 
@@ -636,7 +677,7 @@ static int veye327_identify_module(struct veye327 *veye327)
 		dev_err(&client->dev, "%s: invalid sensor model id: %d\n",
 			__func__, device_id);
     }
-
+    veye327_read_model(veye327);
 	return err;
 }
 
@@ -791,9 +832,9 @@ static int veye327_check_hwcfg(struct device *dev)
 	struct v4l2_fwnode_endpoint ep_cfg = {
 		.bus_type = V4L2_MBUS_CSI2_DPHY
 	};
-    VEYE_TRACE
+    
 	int ret = -EINVAL;
-
+    VEYE_TRACE
 	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
 	if (!endpoint) {
 		dev_err(dev, "endpoint node not found\n");
@@ -881,7 +922,8 @@ static int veye327_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
-    usleep_range(100, 110);
+    //usleep_range(100, 110);
+    msleep(100);
     
     ret = veye327_identify_module(veye327);
 	if (ret)
