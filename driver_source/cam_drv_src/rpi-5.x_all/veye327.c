@@ -644,6 +644,9 @@ static int veye327_read_model(struct veye327 *veye327)
     else if(snr_l == 0x04 && snr_h == 0x62){
         dev_err(&client->dev, "sensor is IMX462\n");
     }
+    else if(snr_l == 0x03 && snr_h == 0x85){
+        dev_err(&client->dev, "sensor is IMX385\n");
+    }
      if(board_no == 0x4C){
         dev_err(&client->dev, "board type is ONE board\n");
     }else{

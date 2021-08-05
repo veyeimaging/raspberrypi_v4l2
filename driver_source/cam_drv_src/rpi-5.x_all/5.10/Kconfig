@@ -773,7 +773,7 @@ config VIDEO_VEYE327
 	select V4L2_FWNODE
 	help
 	  This is a Video4Linux2 sensor driver for the VEYE
-	  IMX327 camera.
+	  IMX327 camera. Also support IMX462 IMX385.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called veye327.
@@ -846,7 +846,7 @@ config VIDEO_IMX477
 	depends on MEDIA_CAMERA_SUPPORT
 	help
 	  This is a Video4Linux2 sensor driver for the Sony
-	  IMX477 camera.
+	  IMX477 camera. Also supports the Sony IMX378.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx477.
