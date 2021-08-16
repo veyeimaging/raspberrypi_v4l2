@@ -1,8 +1,12 @@
 #!/bin/bash
 echo "--------------------------------------"
-echo "usage: sudo ./install_driver.sh veye327/csimx307/cssc132"
+echo "usage: sudo ./install_driver.sh veyecam2m/veye327/csimx307/cssc132"
 driver_name=null;
-if [[ $1 == "veye327" ]]
+
+if [[ $1 == "veyecam2m" ]]
+then
+    driver_name=veyecam2m;
+elif [[ $1 == "veye327" ]]
 then
     driver_name=veye327;
 elif [[ $1 == "csimx307" ]]
@@ -18,7 +22,19 @@ fi
 
 write_camera_to_config()
 {
-    if [[ $driver_name == "veye327" ]]
+    if [[ $driver_name == "veyecam2m" ]]
+    then
+        awk 'BEGIN{ count=0 }       \
+        {                           \
+            if($1 == "dtoverlay=veyecam2m"){       \
+                count++;            \
+            }                       \
+        }END{                       \
+            if(count <= 0){         \
+                system("sudo sh -c '\''echo dtoverlay=veyecam2m >> /boot/config.txt'\''"); \
+            }                       \
+        }' /boot/config.txt
+    elif [[ $driver_name == "veye327" ]]
     then
         awk 'BEGIN{ count=0 }       \
         {                           \

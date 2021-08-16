@@ -777,7 +777,20 @@ config VIDEO_VEYE327
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called veye327.
+      
+config VIDEO_VEYECAM2M
+	tristate "VEYE MIPI CAMERA 2M sensor support"
+	depends on I2C && VIDEO_V4L2
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the VEYE
+	  IMX327 IMX462 IMX385.
 
+	  To compile this driver as a module, choose M here: the
+	  module will be called veyecam2m.
+      
 config VIDEO_CSIMX307
 	tristate "VEYE CSIMX307 sensor support"
 	depends on I2C && VIDEO_V4L2

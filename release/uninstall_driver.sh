@@ -1,8 +1,13 @@
 #!/bin/bash
 echo "--------------------------------------"
-echo "usage: sudo ./uninstall_driver.sh veye327/csimx307/cssc132"
+echo "usage: sudo ./uninstall_driver.sh veyecam2m/veye327/csimx307/cssc132"
 driver_name=null;
-if [[ $1 == "veye327" ]]
+if [[ $1 == "veyecam2m" ]]
+then
+    driver_name=veyecam2m;
+    sudo sed 's/^dtoverlay=veyecam2m/#dtoverlay=veyecam2m/g' -i /boot/config.txt
+
+elif [[ $1 == "veye327" ]]
 then
     driver_name=veye327;
     sudo sed 's/^dtoverlay=veye327/#dtoverlay=veye327/g' -i /boot/config.txt
