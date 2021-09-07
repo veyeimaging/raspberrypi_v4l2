@@ -1015,6 +1015,6 @@ static struct i2c_driver veyecam2m_i2c_driver = {
 
 module_i2c_driver(veyecam2m_i2c_driver);
 
-MODULE_AUTHOR("xumm <www.veye.cc");
+MODULE_AUTHOR("xumm <www.veye.cc>");
 MODULE_DESCRIPTION("veyecam2m sensor v4l2 driver");
 MODULE_LICENSE("GPL v2");
