@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Definitions for CS-MIPI-SC132 camera module on VC I2C bus
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/{
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c_csi_dsi>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			cssc132: cssc132@3b {
+				compatible = "veye,cssc132";
+				reg = <0x3b>;
+				status = "okay";
+				rotation = <0>;
+
+				port {
+					cssc132_0: endpoint {
+						remote-endpoint = <&csi1_ep>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						clock-noncontinuous;
+						link-frequencies =
+							/bits/ 64 <297000000>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&csi1>;
+		__overlay__ {
+			status = "okay";
+
+			port {
+				csi1_ep: endpoint {
+					remote-endpoint = <&cssc132_0>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					clock-noncontinuous;
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@3 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+
+};

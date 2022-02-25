@@ -31,7 +31,7 @@ write_camera_to_config()
             }                       \
         }END{                       \
             if(count <= 0){         \
-                system("sudo sh -c '\''echo dtoverlay=veyecam2m >> /boot/config.txt'\''"); \
+                system("sudo sh -c '\''echo dtoverlay=veyecam2m,media-controller=0 >> /boot/config.txt'\''"); \
             }                       \
         }' /boot/config.txt
     elif [[ $driver_name == "veye327" ]]
