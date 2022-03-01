@@ -9,6 +9,27 @@
 	compatible = "brcm,bcm2835";
 
 	fragment@0 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	clk_frag: fragment@1 {
+		target = <&cam1_clk>;
+		__overlay__ {
+			status = "okay";
+			clock-frequency = <24000000>;
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	i2c_frag: fragment@100 {
 		target = <&i2c_csi_dsi>;
 		__overlay__ {
 			#address-cells = <1>;
@@ -19,11 +40,13 @@
 				compatible = "veye,csimx307";
 				reg = <0x3b>;
 				status = "okay";
+
+
 				rotation = <0>;
 
 				port {
 					csimx307_0: endpoint {
-						remote-endpoint = <&csi1_ep>;
+						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
 						clock-noncontinuous;
@@ -35,13 +58,13 @@
 		};
 	};
 
-	fragment@1 {
+	csi_frag: fragment@101 {
 		target = <&csi1>;
-		__overlay__ {
+		csi: __overlay__ {
 			status = "okay";
 
 			port {
-				csi1_ep: endpoint {
+				csi_ep: endpoint {
 					remote-endpoint = <&csimx307_0>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
@@ -51,18 +74,12 @@
 		};
 	};
 
-	fragment@2 {
-		target = <&i2c0if>;
-		__overlay__ {
-			status = "okay";
-		};
-	};
 
-	fragment@3 {
-		target = <&i2c0mux>;
-		__overlay__ {
-			status = "okay";
-		};
+	__overrides__ {
+		rotation = <&csimx307>,"rotation:0";
+		cam0 = <&i2c_frag>, "target:0=",<&i2c_vc>,
+		       <&csi_frag>, "target:0=",<&csi0>,
+		       <&clk_frag>, "target:0=",<&cam0_clk>;
 	};
 
 
