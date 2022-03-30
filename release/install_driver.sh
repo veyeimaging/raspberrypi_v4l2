@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "--------------------------------------"
-echo "usage: sudo ./install_driver.sh veyecam2m/veye327/csimx307/cssc132"
+echo "usage: sudo ./install_driver.sh veyecam2m/veye327/csimx307/cssc132/veye_mvcam"
 driver_name=null;
 
 if [[ $1 == "veyecam2m" ]]
@@ -15,6 +15,9 @@ then
 elif [[ $1 == "cssc132" ]]
 then
     driver_name=cssc132;
+elif [[ $1 == "veye_mvcam" ]]
+then
+    driver_name=veye_mvcam;
 else
     echo "please tell me the correct camera module name!"
     exit 0;
@@ -68,6 +71,18 @@ write_camera_to_config()
         }END{                       \
             if(count <= 0){         \
                 system("sudo sh -c '\''echo dtoverlay=cssc132,media-controller=0  >> /boot/config.txt'\''"); \
+            }                       \
+        }' /boot/config.txt
+    elif [[ $driver_name == "veye_mvcam" ]]
+    then
+        awk 'BEGIN{ count=0 }       \
+        {                           \
+            if($1 == "dtoverlay=veye_mvcam"){       \
+                count++;            \
+            }                       \
+        }END{                       \
+            if(count <= 0){         \
+                system("sudo sh -c '\''echo dtoverlay=veye_mvcam,media-controller=0  >> /boot/config.txt'\''"); \
             }                       \
         }' /boot/config.txt
     else

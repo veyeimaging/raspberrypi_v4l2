@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "--------------------------------------"
-echo "usage: sudo ./uninstall_driver.sh veyecam2m/veye327/csimx307/cssc132"
+echo "usage: sudo ./uninstall_driver.sh veyecam2m/veye327/csimx307/cssc132/veye_mvcam"
 driver_name=null;
 if [[ $1 == "veyecam2m" ]]
 then
@@ -20,6 +20,10 @@ elif [[ $1 == "cssc132" ]]
 then
     driver_name=cssc132;
     sudo sed 's/^dtoverlay=cssc132/#dtoverlay=cssc132/g' -i /boot/config.txt
+elif [[ $1 == "veye_mvcam" ]]
+then
+    driver_name=veye_mvcam;
+    sudo sed 's/^dtoverlay=veye_mvcam/#dtoverlay=veye_mvcam/g' -i /boot/config.txt
 else
     echo "please tell me the correct camera module name!"
     exit 0;

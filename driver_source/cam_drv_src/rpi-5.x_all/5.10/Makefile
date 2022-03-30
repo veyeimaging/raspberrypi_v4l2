@@ -130,4 +130,5 @@ obj-$(CONFIG_VIDEO_VEYE327)	+= veye327.o
 obj-$(CONFIG_VIDEO_VEYECAM2M)	+= veyecam2m.o
 obj-$(CONFIG_VIDEO_CSIMX307)	+= csimx307.o
 obj-$(CONFIG_VIDEO_CSSC132)	+= cssc132.o
+obj-$(CONFIG_VIDEO_VEYEMVCAM) += veye_mvcam.o
 obj-$(CONFIG_SDR_MAX2175) += max2175.o

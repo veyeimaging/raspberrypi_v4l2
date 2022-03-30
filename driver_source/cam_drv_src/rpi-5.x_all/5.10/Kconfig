@@ -765,18 +765,18 @@ config VIDEO_IMX219
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx219.
       
-config VIDEO_VEYE327
-	tristate "VEYE VEYE327 sensor support"
+config VIDEO_VEYEMVCAM
+	tristate "VEYE MV MIPI camera support"
 	depends on I2C && VIDEO_V4L2
 	select MEDIA_CONTROLLER
 	select VIDEO_V4L2_SUBDEV_API
 	select V4L2_FWNODE
 	help
 	  This is a Video4Linux2 sensor driver for the VEYE
-	  IMX327 camera. Also support IMX462 IMX385.
+	  MV series cameras.
 
 	  To compile this driver as a module, choose M here: the
-	  module will be called veye327.
+	  module will be called veyemvcam.
       
 config VIDEO_VEYECAM2M
 	tristate "VEYE MIPI CAMERA 2M sensor support"
