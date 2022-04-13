@@ -337,9 +337,9 @@ static int mvcam_setroi(struct mvcam *priv)
     priv->cur_fps = fps_reg/100;
     __v4l2_ctrl_modify_range(priv->frmrate, 1, priv->max_fps, 1, priv->cur_fps);
     
-    dev_info(&client->dev,
-			 "max fps is %d,cur fps %d\n",
-			 priv->max_fps,priv->cur_fps);
+//    dev_info(&client->dev,
+//			 "max fps is %d,cur fps %d\n",
+//			 priv->max_fps,priv->cur_fps);
     return 0;
 }
 
@@ -474,7 +474,7 @@ static const struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.min = 0,
 		.max = Image_trigger_mode_num-1,
 		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 	},
 	{
 		.ops = &mvcam_ctrl_ops,
@@ -485,7 +485,7 @@ static const struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.min = 0,
 		.max = Trg_Hard_src_num-1,
 		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 	},
 	{
 		.ops = &mvcam_ctrl_ops,
@@ -506,7 +506,7 @@ static const struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.min = 0,
 		.max = MV_IMX178M_DEF_FPS,
 		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 	},
 };
 //grab some ctrls while streaming
@@ -523,6 +523,7 @@ static void mvcam_v4l2_grab(struct mvcam *mvcam,bool grabbed)
             case V4L2_CID_VEYE_MV_FRAME_RATE:
                 __v4l2_ctrl_grab(mvcam->ctrls[i], grabbed);
             break;
+
             default:
             break;
         }
@@ -726,12 +727,12 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
         if ((format->format.width != priv->roi.width ||
 		 format->format.height != priv->roi.height))
     	{
-    		v4l2_info(sd, "Changing the resolution is not supported with VIDIOC_S_FMT! \n Pls use VIDIOC_S_SELECTION. will ignor width and height params here\n");
+    		v4l2_info(sd, "Changing the resolution is not supported with VIDIOC_S_FMT! \n Pls use VIDIOC_S_SELECTION.\n");
             v4l2_info(sd,"%d,%d,%d,%d\n",format->format.width,priv->roi.width,format->format.height,priv->roi.height);
             return -EINVAL;
     	}
     
-		format->format.colorspace =  V4L2_COLORSPACE_SRGB;//V4L2_COLORSPACE_REC709;
+		format->format.colorspace =  V4L2_COLORSPACE_SRGB;
 		format->format.field = V4L2_FIELD_NONE;
 
 		v4l2_dbg(1, debug, sd, "%s: code: 0x%X",
@@ -775,7 +776,7 @@ static int mvcam_start_streaming(struct mvcam *mvcam)
 	int ret;
     
 	/* Apply customized values from user */
-    ret =  __v4l2_ctrl_handler_setup(mvcam->sd.ctrl_handler);
+ //   ret =  __v4l2_ctrl_handler_setup(mvcam->sd.ctrl_handler);
     debug_printk("mvcam_start_streaming \n");
 	/* set stream on register */
     ret = mvcam_write(client, Image_Acquisition,1);
@@ -1125,15 +1126,15 @@ static int mvcam_identify_module(struct mvcam * priv)
     {
         case VEYE_MIPI_IMX178M:
             priv->model_id = device_id;
-            dev_info(&client->dev, "camera is: VEYE_MIPI_IMX178M\n");
+            dev_info(&client->dev, "camera is: MV-MIPI-IMX178M\n");
             break; 
         case VEYE_MIPI_IMX296M:
             priv->model_id = device_id;
-            dev_info(&client->dev, "camera is：VEYE_MIPI_IMX296M\n");
+            dev_info(&client->dev, "camera is：MV-MIPI-IMX296M\n");
             break; 
         case VEYE_MIPI_SC130M:
             priv->model_id = device_id;
-            dev_info(&client->dev, "camera is: VEYE_MIPI_SC130M\n");
+            dev_info(&client->dev, "camera is: MV-MIPI-SC130M\n");
             break; 
         default:
             dev_err(&client->dev, "camera id do not support: %x \n",device_id);
