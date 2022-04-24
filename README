@@ -1,207 +1,140 @@
-
-How to use VEYE and CS series camera module on Raspberry Pi(V4L2 mode)
-
-http://wiki.veye.cc/index.php/V4L2_mode_for_Raspberry_Pi
-
-Introduction
-
-For the use of VEYE series and CS series camera modules on the raspberry Pi platform, we provide veye_raspicam software, an application layer open source software similar to the raspicam. This series of software, without driver support, has good compatibility with different versions of piOS.
-
-However, we think that the V4L2 driver mode also has a wide range of applications. The two modes cannot be used at the same time, which is embodied in whether the driver is installed or not. It will be described in detail later.
-
-This article describes how to call the camera modules of VEYE series and CS series through V4L2 on the raspberry Pi platform.
-
-Hardware Setup
-
-VEYE series camera module setup on rpi
-
-CS series camera module setup on rpi
-
-RaspberryPi System Setup and Configuration
-
-RaspberryPi System Setup and Configuration
-
-Driver Installation
-Download the driver
-
+The main resources in this section are the official piOS building method.
+We provide methods to compile locally on Raspberry Pi and cross-compile on PC. It is recommended to use Raspberry Pi local compilation, which is simpler and faster.
+# Building the Drivers Locally
+The following operations are performed on the Raspberry Pi.
+The following is an example of piOS 5.15.32.
+## Prepare environment
+```
+sudo apt install git bc bison flex libssl-dev make
+```
+## Download the kernel headers for the local piOS
+```
+sudo apt install raspberrypi-kernel-headers
+```
+## Download drivers code from veye
+```
 git clone https://github.com/veyeimaging/raspberrypi_v4l2.git
+```
+## Confirm the version of piOS on your own Raspberry Pi
+```
+$ uname -a
+Linux raspberrypi 5.15.32-v8+ #1538 SMP PREEMPT Thu Mar 31 19:40:39 BST 2022 aarch64 GNU/Linux
+```
+## Compile drivers
+```
+cd ~/raspberrypi_v4l2/driver_source/cam_drv_src/rpi-5.15_all
+make
+```
+Done.
 
-Install the driver
+## Compile dts
+```
+cd ~/raspberrypi_v4l2/driver_source/dts/rpi-5.15.y
+./build_dtbo.sh
+```
+Done.
 
-cd raspberrypi_v4l2/release/
-
-chmod +x *
-
-sudo ./install_driver.sh [camera module]
-
-camera module：could be veye327,csimx307,cssc132.
-
-Uninstall the driver
-
-If you need to change to using the camera by veye_raspicam software, or if you want to change to a driver of another camera module model, you must first uninstall the current driver.
-
-sudo ./uninstall_driver.sh [camera module]
-
-camera module：could be veye327,csimx307,cssc132.
-
-Check and Test the Camera
-
-Check the camera probe status
-
-VEYE-MIPI-327
-
-dmesg | grep veye
-
-You can see:
-
-veye327 camera probed
-
-CS-MIPI-IMX307
-
-dmesg | grep 307
-
-You can see:
-
-camera id is cs-mipi-imx307
-
-CS-MIPI-SC132
-
-dmesg | grep 132
-
-You can see:
-
-camera id is cs-mipi-sc132
-
-List the video device
-
-ls /dev/video0
-
-The device node exsit.
-
-List the available video modes
-
-v4l2-ctl --list-formats-ext
-
-Gstreamer usage Demo
-
-export DISPLAY=:0
-
-Snap a picture (VEYE-MIPI-327,CS-MIPI-IMX307 @1080p mode)
-
-gst-launch-1.0 v4l2src num-buffers=1 device=/dev/video0 ! 'video/x-raw, format=(string)UYVY, width=1920,height=1080' ! jpegenc ! filesink location=test_image.jpg
-
-Preview (VEYE-MIPI-327,CS-MIPI-IMX307 @1080p mode)
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! "video/x-raw,format=(string)UYVY, width=(int)1920, height=(int)1080,framerate=(fraction)30/1" ! videoconvert ! autovideosink sync=false -v
-
-Preview (CS-MIPI-IMX307,CS-MIPI-SC132 @720p mode)
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! "video/x-raw,format=(string)UYVY, width=(int)1280, height=(int)720,framerate=(fraction)60/1" ! videoconvert ! autovideosink sync=false -v
-
-Preview (CS-MIPI-IMX307,CS-MIPI-SC132 @vga mode)
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! "video/x-raw,format=(string)UYVY, width=(int)640, height=(int)480" ! videoconvert ! autovideosink sync=false -v
-
-Preview (CS-MIPI-SC132 @1280*1080@45 mode)
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! "video/x-raw,format=(string)UYVY, width=(int)1280, height=(int)1080,framerate=(fraction)45/1" ! videoconvert ! autovideosink sync=false -v
-
-Framerate test (VEYE-MIPI-327,CS-MIPI-IMX307 @1080p mode)
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! "video/x-raw,format=(string)UYVY, width=(int)1920, height=(int)1080,framerate=(fraction)30/1" ! videoconvert ! fpsdisplaysink video-sink=fakesink -v
-
-Video Control Toolkits Manual
-
-Because of the high flexibility of our camera parameters, we do not use V4L2 parameters to control, but use scripts to configure parameters.
-
-https://github.com/veyeimaging/raspberrypi/tree/master/i2c_cmd
-
-VEYE Series Video Control Toolkits Manual
-
-CS Series Video Control Toolkits Manual
-
-Source code cross compilation
-
-The main resources in this section are the official piOS building method. We use the method of cross-compilation, and the 5.4.72 version of 32bitOS is taken as an example.
-
+# Cross-Compiling the Drivers
 The following operations are done on ubuntu PC.
 
-Build cross-compilation environment on Ubuntu 64-bitoperating system)
-
+## Build cross-compilation environment on Ubuntu 64-bit operating system)
+```
 sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev
-
+```
+- 32-bit piOS target version
+```
 sudo apt install crossbuild-essential-armhf
-
-Download the standard version of the piOS source code
+```
+- 64-bit piOS target version
+```
+sudo apt install crossbuild-essential-arm64
+```
+## Download the standard version of the piOS source code
 Confirm the piOS version of your raspberry Pi
-
+- Release version
+```
 $ uname -a
-
 Linux raspberrypi 5.4.72-v7l+ #1356 SMP Thu Oct 22 13:57:51 BST 2020 armv7l GNU/Linux
-
-There are two ways to get the source code of the version you want:
-using git to clone the corresponding branch and checkout the corresponding tag.
-
+``` 
+- Code tag
+```
+$ cp /usr/share/doc/raspberrypi-bootloader/changelog.Debian.gz ./
+gunzip changelog.Debian.gz
+```
+Check the top lines and you will know the tag.
+### There are two ways to get the source code of the version you want:
+1. using git to clone the corresponding branch and checkout the corresponding tag.
+```
 git clone --branch rpi-5.4.y https://github.com/raspberrypi/linux
-
 git checkout raspberrypi-kernel_1.20201022-1
-
+``` 
+PS: Please replace the above two commands with your own corresponding versions.
 2. Manually download the version code of the corresponding tag directly from the link below.
 
 https://github.com/raspberrypi/linux/tags
 
 Patch our code to kernel
-Driver source code
-
+```
+git clone https://github.com/veyeimaging/raspberrypi_v4l2.git
+```
+- Driver source code
 camera driver path is ： linux/drivers/media/i2c，copy our camera module drivers to this path.
-
-Modify the the Makefile and Kconfig files
-
+-Modify the the Makefile and Kconfig files
 Modify the Config and Makefile in the same path，add the corresponding camera driver.
-
-dts file
-
+- dts file
 dts file path is ：linux/arch/arm/boot/dts/overlays，copy our [camera]-overlay.dts files to this path.
-
-Modify dts Makefile
-
+- Modify dts Makefile
 Modify the Makefile in the same path，add the corresponding dts compilation option.
 
-Building
-Preparing
-
-export ARCH=arm
-
-export CROSS_COMPILE=arm-linux-gnueabihf-
-
-Raspberry Pi 1, Pi Zero, Pi Zero W, and Compute Module default build configuration
-
+## Building
+### Preparing
+- For Raspberry Pi 1, Zero and Zero W, and Raspberry Pi Compute Module 1 default (32-bit only) build configuration
+```
 KERNEL=kernel
 
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bcmrpi_defconfig
-
-Raspberry Pi 2, Pi 3, Pi 3+, and Compute Module 3 default build configuration
-
+```
+- For Raspberry Pi 2, 3, 3+ and Zero 2 W, and Raspberry Pi Compute Modules 3 and 3+ default 32-bit build configuration
+```
 KERNEL=kernel7
 
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bcm2709_defconfig
-
-Raspberry Pi 4 default build configuration
-
+```
+- For Raspberry Pi 4 and 400, and Raspberry Pi Compute Module 4 default 32-bit build configuration
+```
 KERNEL=kernel7l
 
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bcm2711_defconfig
+```
+- For Raspberry Pi 3, 3+, 4, 400 and Zero 2 W, and Raspberry Pi Compute Modules 3, 3+ and 4 default 64-bit build configuration
+```
+KERNEL=kernel8
 
-Add compilation options
-
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
+```
+### Add compilation options
+- 32-bit version
+```
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+```
+- 64-bit version
+```
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
+```
+Add the compilation options by the corresponding camera module, for 5.4 version kernel the path is driver-- > multimedia-- > i2C.
 
-Add the compilation options by the corresponding camera module, the path is driver-- > multimedia-- > i2C.
+For 5.10 version kernel,the path is Device Drivers --> Multimedia Support --> Media ancillary drivers --> Camera sensor devices.
 
-Build
-
+## Build
+- 32-bit version
+```
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- zImage modules dtbs -j4
-
-References
+```
+- 64-bit version
+```
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs -j4
+```
+# References
 
 https://www.raspberrypi.org/documentation/linux/kernel/building.md
+
