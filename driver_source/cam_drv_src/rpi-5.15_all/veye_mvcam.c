@@ -1190,7 +1190,7 @@ static int mvcam_probe(struct i2c_client *client,
 	struct mvcam *mvcam;
     
 	int ret;
-	mvcam = devm_kzalloc(&client->dev, sizeof(*mvcam), GFP_KERNEL);
+	mvcam = devm_kzalloc(&client->dev, sizeof(struct mvcam), GFP_KERNEL);
 	if (!mvcam)
 		return -ENOMEM;
 	/* Initialize subdev */

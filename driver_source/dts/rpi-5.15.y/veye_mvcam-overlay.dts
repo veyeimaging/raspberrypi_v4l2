@@ -3,7 +3,7 @@
 /dts-v1/;
 /plugin/;
 
-#include <dt-bindings/gpio/gpio.h>
+//#include <dt-bindings/gpio/gpio.h>
 
 /{
 	compatible = "brcm,bcm2835";
