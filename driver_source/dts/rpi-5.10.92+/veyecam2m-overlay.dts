@@ -3,8 +3,6 @@
 /dts-v1/;
 /plugin/;
 
-#include <dt-bindings/gpio/gpio.h>
-
 /{
 	compatible = "brcm,bcm2835";
 	fragment@0 {
@@ -15,7 +13,7 @@
 	};
 
 	clk_frag: fragment@1 {
-		target = <&cam1_clk>;
+		target = <&cam0_clk>;
 		__overlay__ {
 			status = "okay";
 			clock-frequency = <24000000>;
