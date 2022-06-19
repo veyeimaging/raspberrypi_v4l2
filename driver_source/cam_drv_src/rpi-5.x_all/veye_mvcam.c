@@ -101,6 +101,8 @@ struct mvcam {
 	int current_format_idx;
     u32 max_width;
     u32 max_height;
+    u32 min_width;
+    u32 min_height;
     struct v4l2_rect roi;//the same as roi
     //max fps @ current roi format
     u32 max_fps;
@@ -438,9 +440,9 @@ static const struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.id = V4L2_CID_PIXEL_RATE,
 		.name = NULL,//kernel fill fill it
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_IMX178M_PIXEL_RATE,
-		.min = MV_IMX178M_PIXEL_RATE,
-		.max = MV_IMX178M_PIXEL_RATE,
+		.def = MV_CAM_PIXEL_RATE,
+		.min = MV_CAM_PIXEL_RATE,
+		.max = MV_CAM_PIXEL_RATE,
 		.step = 1,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
 	},
@@ -502,9 +504,9 @@ static const struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.id = V4L2_CID_VEYE_MV_FRAME_RATE,
 		.name = "frame_rate",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_IMX178M_DEF_FPS,
+		.def = MV_CAM_DEF_FPS,
 		.min = 0,
-		.max = MV_IMX178M_DEF_FPS,
+		.max = MV_CAM_DEF_FPS,
 		.step = 1,
 		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 	},
@@ -664,10 +666,10 @@ static int mvcam_set_selection(struct v4l2_subdev *sd,
     
         switch (sel->target) {
         case V4L2_SEL_TGT_CROP:
-            priv->roi.left  = clamp(rounddown(sel->r.left, MV_IMX178M_ROI_W_ALIGN), 0U, (priv->max_width-MV_IMX178M_ROI_W_MIN));
-            priv->roi.top  = clamp(rounddown(sel->r.top, MV_IMX178M_ROI_H_ALIGN), 0U, (priv->max_height-MV_IMX178M_ROI_H_MIN));
-            priv->roi.width = clamp(rounddown(sel->r.width, MV_IMX178M_ROI_W_ALIGN), MV_IMX178M_ROI_W_MIN, priv->max_width);
-            priv->roi.height = clamp(rounddown(sel->r.height, MV_IMX178M_ROI_H_ALIGN), MV_IMX178M_ROI_H_MIN, priv->max_height);
+            priv->roi.left  = clamp(rounddown(sel->r.left, MV_CAM_ROI_W_ALIGN), 0U, (priv->max_width-priv->min_width));
+            priv->roi.top  = clamp(rounddown(sel->r.top, MV_CAM_ROI_H_ALIGN), 0U, (priv->max_height-priv->min_height));
+            priv->roi.width = clamp(rounddown(sel->r.width, MV_CAM_ROI_W_ALIGN), priv->min_width, priv->max_width);
+            priv->roi.height = clamp(rounddown(sel->r.height, MV_CAM_ROI_H_ALIGN), priv->min_height, priv->max_height);
             mvcam_setroi(priv);
     
             break;
@@ -699,8 +701,8 @@ static int mvcam_csi2_try_fmt(struct v4l2_subdev *sd,
 	int ret = 0;
 
 	ret = mvcam_frm_supported(
-			MV_IMX178M_ROI_W_MIN, priv->max_width, MV_IMX178M_ROI_W_ALIGN,
-			MV_IMX178M_ROI_H_MIN, priv->max_height, MV_IMX178M_ROI_H_ALIGN,
+			priv->min_width, priv->max_width, MV_CAM_ROI_W_ALIGN,
+			priv->min_height, priv->max_height, MV_CAM_ROI_H_ALIGN,
 			format->format.width, format->format.height);
 
 	if (ret < 0) {
@@ -1226,6 +1228,14 @@ static int mvcam_probe(struct i2c_client *client,
 
     mvcam_read(client, Sensor_Width, &mvcam->max_width);
     mvcam_read(client, Sensor_Height, &mvcam->max_height);
+    if(mvcam->model_id == VEYE_MIPI_IMX178M){
+        mvcam->min_width = MV_IMX178M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX178M_ROI_H_MIN;
+        
+    }else if(mvcam->model_id == VEYE_MIPI_SC130M){
+        mvcam->min_width = MV_SC130M_ROI_W_MIN;
+        mvcam->min_height = MV_SC130M_ROI_H_MIN;
+    }
     v4l2_dbg(1, debug, mvcam->client, "%s: max width %d; max height %d\n",
 					__func__, mvcam->max_width,mvcam->max_height);
 	if (mvcam_enum_controls(mvcam)) {
