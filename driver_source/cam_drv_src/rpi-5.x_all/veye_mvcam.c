@@ -685,8 +685,8 @@ static int mvcam_frm_supported(int wmin, int wmax, int ws,
 	if (
 		w > wmax || w < wmin ||
 		h > hmax || h < hmin ||
-		(h - hmin) % hs != 0 ||
-		(w - wmin) % ws != 0
+		h % hs != 0 ||
+		w % ws != 0
 	)
 		return -EINVAL;
 
@@ -706,7 +706,9 @@ static int mvcam_csi2_try_fmt(struct v4l2_subdev *sd,
 			format->format.width, format->format.height);
 
 	if (ret < 0) {
-		v4l2_err(sd, "Not supported format!\n");
+		v4l2_err(sd, "Not supported format! %d %d %d %d %d %d\n",priv->min_width, priv->max_width,
+			priv->min_height, priv->max_height,
+			format->format.width, format->format.height);
 		return ret;
 	}
 
