@@ -3,33 +3,12 @@
 /dts-v1/;
 /plugin/;
 
-//#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/gpio/gpio.h>
 
 /{
 	compatible = "brcm,bcm2835";
 
 	fragment@0 {
-		target = <&i2c0if>;
-		__overlay__ {
-			status = "okay";
-		};
-	};
-
-	clk_frag: fragment@1 {
-		target = <&cam1_clk>;
-		__overlay__ {
-			status = "okay";
-			clock-frequency = <24000000>;
-		};
-	};
-
-	fragment@2 {
-		target = <&i2c0mux>;
-		__overlay__ {
-			status = "okay";
-		};
-	};
-	i2c_frag: fragment@100 {
 		target = <&i2c_csi_dsi>;
 		__overlay__ {
 			#address-cells = <1>;
@@ -40,13 +19,10 @@
 				compatible = "veye,csimx307";
 				reg = <0x3b>;
 				status = "okay";
-
-
 				rotation = <0>;
-
 				port {
 					csimx307_0: endpoint {
-						remote-endpoint = <&csi_ep>;
+						remote-endpoint = <&csi1_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
 						clock-noncontinuous;
@@ -58,11 +34,10 @@
 		};
 	};
 
-	csi_frag: fragment@101 {
+	fragment@1 {
 		target = <&csi1>;
-		csi1: __overlay__ {
+		__overlay__ {
 			status = "okay";
-
 			port {
 				csi1_ep: endpoint {
 					remote-endpoint = <&csimx307_0>;
@@ -73,20 +48,18 @@
 			};
 		};
 	};
-    i2c_frag2: fragment@102 {
+    fragment@2 {
 		target = <&i2c0>;
 		__overlay__ {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "okay";
-            csimx307@3b {
+
+			csimx307@3b {
 				compatible = "veye,csimx307";
 				reg = <0x3b>;
 				status = "okay";
-
-
 				rotation = <0>;
-
 				port {
 					csimx307_1: endpoint {
 						remote-endpoint = <&csi0_ep>;
@@ -101,11 +74,10 @@
 		};
 	};
 
-	csi_frag2: fragment@103 {
+	fragment@3 {
 		target = <&csi0>;
-		csi2: __overlay__ {
+		__overlay__ {
 			status = "okay";
-
 			port {
 				csi0_ep: endpoint {
 					remote-endpoint = <&csimx307_1>;
@@ -116,13 +88,18 @@
 			};
 		};
 	};
+	fragment@4 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
 
-	__overrides__ {
-		
-		cam0 = <&i2c_frag>, "target:0=",<&i2c_vc>,
-		       <&csi_frag>, "target:0=",<&csi0>;
-        cam1 = <&i2c_frag2>, "target:0=",<&i2c_arm>,
-		       <&csi_frag2>, "target:0=",<&csi1>;
+	fragment@5 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
 	};
 
 

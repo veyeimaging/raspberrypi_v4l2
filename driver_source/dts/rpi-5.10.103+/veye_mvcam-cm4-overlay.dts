@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Definitions for VEYE MVCAM camera module on VC I2C bus
+/dts-v1/;
+/plugin/;
+
+/{
+	compatible = "brcm,bcm2835";
+	fragment@0 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	i2c_frag1: fragment@100 {
+		target = <&i2c_csi_dsi>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			veyemvcam1: veyemvcam@3b {
+				compatible = "veye,mvcam";
+				reg = <0x3b>;
+				status = "okay";
+
+                clocks = <&veyemvcam_clk>;
+				clock-names = "xclk";
+				VANA-supply = <&veyemvcam_vana>;	/* 2.8v */
+				VDIG-supply = <&veyemvcam_vdig>;	/* 1.8v */
+				VDDL-supply = <&veyemvcam_vddl>;	/* 1.2v */
+				rotation = <0>;
+
+				port {
+					veyemvcam_0: endpoint {
+						remote-endpoint = <&csi_ep>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						clock-noncontinuous;
+						link-frequencies =
+							/bits/ 64 <750000000>;
+					};
+				};
+			};
+		};
+	};
+
+	csi_frag1: fragment@101 {
+		target = <&csi1>;
+		__overlay__ {
+			status = "okay";
+
+			port {
+				csi_ep: endpoint {
+					remote-endpoint = <&veyemvcam_0>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					clock-noncontinuous;
+				};
+			};
+		};
+	};
+	i2c_frag2: fragment@102 {
+		target = <&i2c0>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			veyemvcam2: veyemvcam@3b {
+				compatible = "veye,mvcam";
+				reg = <0x3b>;
+				status = "okay";
+                clocks = <&veyemvcam_clk>;
+				clock-names = "xclk";
+				VANA-supply = <&veyemvcam_vana>;	/* 2.8v */
+				VDIG-supply = <&veyemvcam_vdig>;	/* 1.8v */
+				VDDL-supply = <&veyemvcam_vddl>;	/* 1.2v */
+				rotation = <0>;
+
+				port {
+					veyemvcam_1: endpoint {
+						remote-endpoint = <&csi0_ep>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						clock-noncontinuous;
+						link-frequencies =
+							/bits/ 64 <750000000>;
+					};
+				};
+			};
+		};
+	};
+
+	csi_frag2: fragment@103 {
+		target = <&csi0>;
+		__overlay__ {
+			status = "okay";
+
+			port {
+				csi0_ep: endpoint {
+					remote-endpoint = <&veyemvcam_1>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					clock-noncontinuous;
+				};
+			};
+		};
+	};
+
+fragment@104 {
+			target-path="/";
+			__overlay__ {
+
+				veyemvcam_vdig: fixedregulator@1 {
+					compatible = "regulator-fixed";
+					regulator-name = "veyemvcam_vdig";
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <1800000>;
+				};
+				veyemvcam_vddl: fixedregulator@2 {
+					compatible = "regulator-fixed";
+					regulator-name = "veyemvcam_vddl";
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
+				};
+                veyemvcam_vana: fixedregulator@3 {
+					compatible = "regulator-fixed";
+					regulator-name = "veyemvcam_vana";
+					regulator-min-microvolt = <2800000>;
+					regulator-max-microvolt = <2800000>;
+				};
+				veyemvcam_clk: camera-clk {
+					compatible = "fixed-clock";
+					#clock-cells = <0>;
+					clock-frequency = <24000000>;
+				};
+			};
+		};
+
+	__overrides__ {
+
+		cam0 = <&i2c_frag1>, "target:0=",<&i2c_vc>,
+		       <&csi_frag1>, "target:0=",<&csi0>;
+
+        cam1 = <&i2c_frag2>, "target:0=",<&i2c_arm>,
+		       <&csi_frag2>, "target:0=",<&csi1>;
+
+	};
+};
