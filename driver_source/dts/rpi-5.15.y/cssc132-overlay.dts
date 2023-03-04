@@ -36,16 +36,17 @@
 			#size-cells = <0>;
 			status = "okay";
 
-			cssc132: cssc132@3b {
+			cam_node: cssc132@3b {
 				compatible = "veye,cssc132";
 				reg = <0x3b>;
 				status = "okay";
 
 
-				rotation = <0>;
+		            rotation = <180>;
+		            orientation = <2>;
 
 				port {
-					cssc132_0: endpoint {
+					cam_endpoint: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
@@ -65,7 +66,7 @@
 
 			port {
 				csi_ep: endpoint {
-					remote-endpoint = <&cssc132_0>;
+					remote-endpoint = <&cam_endpoint>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
 					clock-noncontinuous;
@@ -77,7 +78,8 @@
 
 
 	__overrides__ {
-		rotation = <&cssc132>,"rotation:0";
+		rotation = <&cam_node>,"rotation:0";
+		orientation = <&cam_node>,"orientation:0";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_vc>,
 		       <&csi_frag>, "target:0=",<&csi0>,
 		       <&clk_frag>, "target:0=",<&cam0_clk>;
