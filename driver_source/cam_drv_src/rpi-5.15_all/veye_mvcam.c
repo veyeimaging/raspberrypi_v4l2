@@ -626,7 +626,7 @@ static int mvcam_csi2_get_fmt(struct v4l2_subdev *sd,
     		format->format.code = current_format->mbus_code;
     		format->format.field = V4L2_FIELD_NONE;
             //for uyvy gstreamer 
-    		format->format.colorspace = V4L2_COLORSPACE_SRGB;//V4L2_COLORSPACE_REC709;
+    		format->format.colorspace = V4L2_COLORSPACE_REC709;//V4L2_COLORSPACE_REC709;
 /*            format->format.ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(format->format.colorspace);
         	format->format.quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
         							  format->format.colorspace,
@@ -736,7 +736,7 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
             return -EINVAL;
     	}
     
-		format->format.colorspace =  V4L2_COLORSPACE_SRGB;
+		format->format.colorspace =  V4L2_COLORSPACE_REC709;
 		format->format.field = V4L2_FIELD_NONE;
 
 		v4l2_dbg(1, debug, sd, "%s: code: 0x%X",
@@ -1152,6 +1152,10 @@ static int mvcam_identify_module(struct mvcam * priv)
             priv->model_id = device_id;
             dev_info(&client->dev, "camera is: RAW-MIPI-SC132M\n");
             break;
+        case MV_MIPI_IMX287M:
+            priv->model_id = device_id;
+            dev_info(&client->dev, "camera is: MV_MIPI_IMX287M\n");
+            break;
         default:
             dev_err(&client->dev, "camera id do not support: %x \n",device_id);
 		return -EIO;
@@ -1260,7 +1264,10 @@ static int mvcam_probe(struct i2c_client *client,
         mvcam->min_height = MV_IMX264M_ROI_H_MIN;
     }else if(mvcam->model_id == RAW_MIPI_SC132M){
         mvcam->min_width = RAW_SC132M_ROI_W_MIN;
-        mvcam->min_height = RAW_SC132M_ROI_W_MIN;
+        mvcam->min_height = RAW_SC132M_ROI_H_MIN;
+    }else if(mvcam->model_id == MV_MIPI_IMX287M){
+        mvcam->min_width = MV_IMX287M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX287M_ROI_H_MIN;
     }
     v4l2_dbg(1, debug, mvcam->client, "%s: max width %d; max height %d\n",
 					__func__, mvcam->max_width,mvcam->max_height);
