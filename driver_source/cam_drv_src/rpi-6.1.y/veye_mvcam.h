@@ -116,6 +116,8 @@
 #define V4L2_CID_VEYE_MV_SOFT_TRGONE			(V4L2_CID_VEYE_MV_BASE + 3)
 
 #define V4L2_CID_VEYE_MV_FRAME_RATE				(V4L2_CID_VEYE_MV_BASE + 4)
+#define V4L2_CID_VEYE_MV_ROI_X		        	(V4L2_CID_VEYE_MV_BASE + 5)
+#define V4L2_CID_VEYE_MV_ROI_Y  				(V4L2_CID_VEYE_MV_BASE + 6)
 
 enum enum_TriggerMode{
     Image_Continues = 0,
@@ -143,6 +145,10 @@ enum enum_TriggerSrc{
 #define RAW_MIPI_SC132M 0x8132
 
 #define MV_CAM_PIXEL_RATE	750000000 //750M
+/* MV mipi clk is 742.5Mhz */
+#define MVCAM_DEFAULT_LINK_FREQ     742500000
+/*RAW mipi clk is 559Mhz */
+#define RAWCAM_DEFAULT_LINK_FREQ	559000000
 
 #define MV_CAM_DEF_FPS      22U
 
