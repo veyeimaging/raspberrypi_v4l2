@@ -630,7 +630,7 @@ static int mvcam_csi2_get_fmt(struct v4l2_subdev *sd,
     		format->format.code = current_format->mbus_code;
     		format->format.field = V4L2_FIELD_NONE;
             //for uyvy gstreamer 
-    		format->format.colorspace = V4L2_COLORSPACE_REC709;//V4L2_COLORSPACE_REC709;
+    		//format->format.colorspace = V4L2_COLORSPACE_REC709;//V4L2_COLORSPACE_REC709;
 /*            format->format.ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(format->format.colorspace);
         	format->format.quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
         							  format->format.colorspace,
@@ -768,7 +768,7 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
             return -EINVAL;
     	}*/
     
-		format->format.colorspace =  V4L2_COLORSPACE_REC709;
+		//format->format.colorspace =  V4L2_COLORSPACE_REC709;
 		format->format.field = V4L2_FIELD_NONE;
 
 		v4l2_dbg(1, debug, sd, "%s: code: 0x%X",
@@ -1394,7 +1394,7 @@ err_destroy_mutex:
 	return ret;
 }
 
-static void mvcam_remove(struct i2c_client *client)
+static int mvcam_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mvcam *mvcam = to_mvcam(sd);
@@ -1404,6 +1404,7 @@ static void mvcam_remove(struct i2c_client *client)
 	mvcam_free_controls(mvcam);
 
 	mutex_destroy(&mvcam->mutex);
+    return 0;
 }
 
 static const struct of_device_id veyemv_cam_dt_ids[] = {
