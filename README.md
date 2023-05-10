@@ -45,11 +45,23 @@ The Raspbian maintainers always remove the older kernel headers from the reposit
 
 Solutions：
 
-1. Upgrade piOS, and build again.
-
+#### 1. Upgrade piOS, and build again.
+`sudo apt update`
+`sudo apt full-upgrade`
 `sudo apt install raspberrypi-kernel raspberrypi-kernel-headers`
 
-2. Install specific version kernel headers.
+Specifically, for the Raspberry Pi 4 series, 32-bit PiOS will automatically switch to 64-bit mode after upgrading to the latest version. However, the raspberrypi-kernel-headers package is missing the build directory for the v8+ mode.
+
+For example:
+```
+$ uname -a
+Linux raspberrypi 6.1.21-v8+ #1642 SMP PREEMPT Mon Apr 3 17:24:16 BST 2023 aarch64 GNU/Linux
+```
+There is no build directory under `/lib/modules/6.1.21-v8+/`.
+
+If this happens, you can add `arm_64bit=0` to the `/boot/config.txt` file and then restart the Raspberry Pi to switch back to 32-bit mode.
+
+#### 2. Install specific version kernel headers.
 
 Download the deb package for the version of piOS you are currently using from this link and install it.
 https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-firmware/
@@ -57,6 +69,9 @@ https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-firmware/
 For tag name, please determine according to the local piOS version and raspberrypi OS tags.
 
 https://github.com/raspberrypi/linux/tags
+
+#### Use rpi-source
+Use rpi-source from https://github.com/RPi-Distro/rpi-source it sets up everything you need to build your own kernel (from the current running kernel by default).
 
 # Cross-Compiling the Drivers
 The following operations are done on ubuntu PC.
