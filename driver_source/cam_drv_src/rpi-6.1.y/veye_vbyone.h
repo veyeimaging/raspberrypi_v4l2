@@ -27,12 +27,22 @@
 /*------------------------------------------------------------------------------
  * Deserializer registers
  *----------------------------------------------------------------------------*/
+#define R_2WIREPT_WA_DATA_BYTE 0x0032
+#define R_2WIREPT1_PASS_ADR000 0x0040
+#define R_2WIREPT1_PASS_ADR001 0x0041
 
+#define R_2WIREPT1_PASS_ADRIN0 0x0050
 
+#define R_GPIO23_MODE 0x1003
+#define R_GPIO01_MODE 0x1004
 
 /*------------------------------------------------------------------------------
  * Serializer registers
  *----------------------------------------------------------------------------*/
+
+#define R_GPIO_TYP 0x3D
+#define R_GPIO_OEN 0x3E
+#define R_GPIO_CMOSEN 0x3F
 
 
 /*------------------------------------------------------------------------------
@@ -53,7 +63,7 @@ struct thcv241a_priv {
 	int i2c_address;
 	int csi_lane_count;
 	int csi_lane_speed;
-	int cam_i2c_address;
+	
 	int initialized;
 };
 
@@ -68,12 +78,13 @@ struct thcv242a_priv {
 	int csi_lane_speed;
 	int coax_num;
 	int cam_i2c_pt_setting;
-
+    int cam_i2c_address;
+    
+    int trgin_gpio_mode; // 0: no use ;1 : polling
 	int pdb_gpio_mode; //0: no use ;1 : polling
-	int trgin_gpio_mode; // 0: no use ;1 : polling
 	int out1_gpio_mode; // 0: no use ;1 : polling
 	int out2_gpio_mode; // 0: no use ;1 : polling
-
+    
 };
 
 #endif /* I2C_DS90UB954_H */

@@ -130,11 +130,11 @@ void print_regmap_info(struct regmap *regmap) {
 static int thcv242a_init_pre(struct thcv242a_priv *priv)
 {
     int err = 0;
-    unsigned int val;
+    //unsigned int val;
     struct device *dev = &priv->client->dev;
     dev_info(dev, "%s: begin \n", __func__);
     
-    err |= thcv242a_write(priv,0x0050,0x34);
+    err |= thcv242a_write(priv,R_2WIREPT1_PASS_ADRIN0,priv->ser[0]->i2c_address);//0x34
     err |= thcv242a_write(priv,0x0004,0x03);
     err |= thcv242a_write(priv,0x0010,0x10);
     err |= thcv242a_write(priv,0x1704,0x01);
@@ -163,7 +163,9 @@ static int thcv241a_regmap_update(struct thcv242a_priv *priv, int ser_nr);
 static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *serpriv)
 {
     int err = 0;
-    unsigned int val;
+    //unsigned int val = 0;
+    unsigned int io_type = 0;
+    unsigned int io_dir = 0;
     struct device *dev = &despriv->client->dev;
     dev_info(dev, "%s: begin \n", __func__);
     
@@ -177,7 +179,7 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
     //print_regmap_info(serpriv->regmap);
     //dev_info(dev, "=============ser reg map info==END==========\n");
     
-    err |= thcv242a_write(despriv,0x0032, 0x10);
+    err |= thcv242a_write(despriv,R_2WIREPT_WA_DATA_BYTE, 0x10);
     
     //err |= thcv242a_read(despriv,0x0032, &val);
     //dev_info(dev, "thcv242a_read 0x0032 val is %x ,should be 0x10\n",val );
@@ -188,7 +190,7 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
     //dev_info(dev, "thcv241a_read 0x00FE val is %x ,should be 0x11\n",val );
     
     
-    err |= thcv242a_write(despriv,0x0032, 0x00);
+    err |= thcv242a_write(despriv,R_2WIREPT_WA_DATA_BYTE, 0x00);
     //change to 8bit add and 8bit val
     err |= thcv241a_regmap_update(despriv,0);
     dev_info(dev, "%s: change 241 addr to 8bit addr \n", __func__);
@@ -231,9 +233,27 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
     err |= thcv241a_write(serpriv,0x27,0x00);
     err |= thcv241a_write(serpriv,0x1D,0x00);
     err |= thcv241a_write(serpriv,0x1E,0x00);
-    err |= thcv241a_write(serpriv,0x3D,0x0F);
-    err |= thcv241a_write(serpriv,0x3E,0x0C);
-    err |= thcv241a_write(serpriv,0x3F,0x0F);
+    if(despriv->trgin_gpio_mode){
+        io_type |= 0x1; //polling
+        io_dir &= 0xFE;// output
+    }
+    if(despriv->pdb_gpio_mode){
+        io_type |= 0x2;//polling
+        io_dir &= 0xFD;// output
+    }
+    if(despriv->out1_gpio_mode){
+        io_type |= 0x4;//polling
+        io_dir |= 0x4;// input
+    }
+    if(despriv->out2_gpio_mode){
+        io_type |= 0x8;//polling
+        io_dir |= 0x8;// input
+    }
+    
+    err |= thcv241a_write(serpriv,R_GPIO_TYP,io_type);
+    err |= thcv241a_write(serpriv,R_GPIO_OEN,io_dir);
+    err |= thcv241a_write(serpriv,R_GPIO_CMOSEN,0x0F);//CMOS mode
+    
     dev_info(dev, "%s:  successfully \n", __func__);
     
    // err |= thcv241a_read(serpriv,0x3F, &val);
@@ -244,6 +264,7 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
 static int thcv242a_init_post(struct thcv242a_priv *priv)
 {
     int err = 0;
+    unsigned int io_mode = 0;
     struct device *dev = &priv->client->dev;
     dev_info(dev, "%s: begin \n", __func__);
     err |= thcv242a_write(priv,0x0010,0x11);
@@ -277,14 +298,29 @@ static int thcv242a_init_post(struct thcv242a_priv *priv)
     err |= thcv242a_write(priv,0x1612,0x0D);
     err |= thcv242a_write(priv,0x1703,0x01);
     err |= thcv242a_write(priv,0x1704,0x11);
-    err |= thcv242a_write(priv,0x1003,0x44);
-    err |= thcv242a_write(priv,0x1004,0x33);
-    err |= thcv242a_write(priv,0x001B,0x18);
-    err |= thcv242a_write(priv,0x0032,0x10);
-    err |= thcv242a_write(priv,0x0040,0x3b);
-    err |= thcv242a_write(priv,0x0041,0x3b);
     
-    err |= thcv242a_write(priv,0x0032,priv->cam_i2c_pt_setting);
+    if(priv->out1_gpio_mode){
+        io_mode |= 0x4; //Through GPo Mode
+    }
+    if(priv->out2_gpio_mode){
+        io_mode |= 0x40;//Through GPo Mode
+    }
+    err |= thcv242a_write(priv,R_GPIO23_MODE,io_mode);
+    
+    if(priv->trgin_gpio_mode){
+        io_mode |= 0x3; //Through GPI Mode
+    }
+    if(priv->pdb_gpio_mode){
+        io_mode |= 0x30;//Through GPI Mode
+    }
+    err |= thcv242a_write(priv,R_GPIO01_MODE,io_mode);
+    
+    err |= thcv242a_write(priv,0x001B,0x18);
+    err |= thcv242a_write(priv,R_2WIREPT_WA_DATA_BYTE,0x10);
+    err |= thcv242a_write(priv,R_2WIREPT1_PASS_ADR000,priv->cam_i2c_address);
+    err |= thcv242a_write(priv,R_2WIREPT1_PASS_ADR001,priv->cam_i2c_address);
+    
+    err |= thcv242a_write(priv,R_2WIREPT_WA_DATA_BYTE,priv->cam_i2c_pt_setting);
     dev_info(dev, "%s:  successfully \n", __func__);
     return err;
 }
@@ -370,6 +406,17 @@ static int thcv242a_parse_dt(struct thcv242a_priv *priv)
 		dev_info(dev, "%s: - cam_i2c_pt_setting %i\n", __func__, val);
 	}
 
+    err = of_property_read_u32(np, "camera-i2c-address", &val);
+    if(err) {
+        dev_info(dev, "%s: - camera-i2c-address not found\n", __func__);
+        priv->cam_i2c_address = 0x3b;
+        dev_info(dev, "%s: - camera-i2c-address set to default val: 0x18\n",
+             __func__);
+    } else {
+        dev_info(dev, "%s: - camera-i2c-address: 0x%X \n", __func__, val);
+        priv->cam_i2c_address=val;
+    }
+    
     err = of_property_read_u32(np, "pdb-gpio-mode", &val);
     if (err) {
        dev_info(dev, "Failed to read pdb-gpio: %d\n", err);
@@ -564,17 +611,7 @@ static int thcv241a_parse_dt(struct i2c_client *client,
         dev_info(dev, "%s: - csi-lane-speed %i\n", __func__, val);
     }
 
-    err = of_property_read_u32(ser, "camera-i2c-address", &val);
-    if(err) {
-        dev_info(dev, "%s: - camera-i2c-address not found\n", __func__);
-        thcv241a->cam_i2c_address = 0x3b;
-        dev_info(dev, "%s: - camera-i2c-address set to default val: 0x18\n",
-             __func__);
-    } else {
-        dev_info(dev, "%s: - camera-i2c-address: 0x%X \n", __func__, val);
-        thcv241a->cam_i2c_address=val;
-    }
-    
+
     err = thcv241a_i2c_client(priv, 0,  thcv241a->i2c_address);
     if(err) {
         dev_info(dev, "%s: - thcv241a_i2c_client failed\n",

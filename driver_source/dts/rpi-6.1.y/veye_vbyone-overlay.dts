@@ -33,9 +33,10 @@
                 csi-lane-speed = <1500>;
                 coax-num = <1>;
                 cam-i2c-pt-setting = <0x13>;
-
-                pdb-gpio-mode = <0>;
+                camera-i2c-address=<0x3b>;
+                
                 trgin-gpio-mode = <1>;
+                pdb-gpio-mode = <0>;
                 out1-gpio-mode = <1>;
                 out2-gpio-mode = <1>;
                 
@@ -43,7 +44,6 @@
                     i2c-address=<0x34>;
                     csi-lane-count = <2>;
                     csi-lane-speed = <1500>;
-                    camera-i2c-address=<0x3b>;
                 };
             };
 		};
