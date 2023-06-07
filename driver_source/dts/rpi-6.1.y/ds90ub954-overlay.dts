@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Definitions for VEYE IMAGING's Fpdlink-III 
+/dts-v1/;
+/plugin/;
+
+/{
+	compatible = "brcm,bcm2835";
+    fragment@0 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@1 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	i2c_fragment:fragment@2 {
+		target = <&i2c_csi_dsi>;
+            __overlay__ {
+                #address-cells = <1>;
+                #size-cells = <0>;
+                status = "okay";
+                
+                ds90ub954@30 {
+                    compatible = "ti,ds90ub954";
+                    priority = <(-1)>;
+                    reg = <0x30>;
+                    status = "okay";
+                    csi-lane-count = <2>;
+                    csi-lane-speed = <800>;
+                    //continuous-clock;
+                    //pdb-gpio = <&gpio TEGRA_GPIO(S, 7) 0>;
+                    //pass-gpio = <&gpio TEGRA_GPIO(S, 0) 0>;
+                    //lock-gpio = <&gpio TEGRA_GPIO(T, 0) 0>;
+                    i2c_address_s0: num-alias-pairs0 {list-cells = <1>;};
+                    serializers {
+                        status = "okay";
+                        num-channels = <1>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        serializer@0 {
+                            status = "okay";
+                            rx-channel=<0>;
+                            i2c-address=<0x19>;
+                            csi-lane-count = <2>;
+                            i2c-slave = <&i2c_address_s0 0x3b>;
+                            slave-alias = <&i2c_address_s0 0x3b>;
+                        };
+                    };
+                };
+		};
+	};
+    __overrides__ {
+		cam0 = <&i2c_fragment>, "target:0=",<&i2c_vc>;
+	};
+};
