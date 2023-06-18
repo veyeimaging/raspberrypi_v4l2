@@ -75,13 +75,11 @@ struct thcv242a_priv {
 	struct thcv241a_priv *ser[NUM_SERIALIZER]; //serializers
 
 	int csi_lane_count;
-	int csi_lane_speed;
 	int coax_num;
 	int cam_i2c_pt_setting;
     int cam_i2c_address;
     
     int trgin_gpio_mode; // 0: no use ;1 : polling
-	int pdb_gpio_mode; //0: no use ;1 : polling
 	int out1_gpio_mode; // 0: no use ;1 : polling
 	int out2_gpio_mode; // 0: no use ;1 : polling
     

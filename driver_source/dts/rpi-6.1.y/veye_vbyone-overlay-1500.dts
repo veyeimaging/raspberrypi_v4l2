@@ -34,14 +34,14 @@
                 cam-i2c-pt-setting = <0x13>;
                 camera-i2c-address=<0x3b>;
                 
-                trgin-gpio-mode = <0>;
-                out1-gpio-mode = <0>;
-                out2-gpio-mode = <0>;
+                trgin-gpio-mode = <1>;
+                out1-gpio-mode = <1>;
+                out2-gpio-mode = <1>;
                 
                 serializer {
                     i2c-address=<0x34>;
                     csi-lane-count = <2>;
-                    csi-lane-speed = <1188>;
+                    csi-lane-speed = <1500>;
                 };
             };
 		};

@@ -885,7 +885,11 @@ static int veyecam2m_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct veyecam2m *veyecam2m;
 	int ret;
-
+    //try waiting for fdplink
+    if (request_module("ds90ub954") != 0) {
+        dev_err(dev, "Unable to load ds90ub954 driver,will go on\n");
+        //return -ENODEV;
+    }
 	veyecam2m = devm_kzalloc(&client->dev, sizeof(*veyecam2m), GFP_KERNEL);
 	if (!veyecam2m)
 		return -ENOMEM;

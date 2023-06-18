@@ -74,6 +74,7 @@ static int thcv242a_write(const struct thcv242a_priv *priv, unsigned int reg,
 		dev_err(&priv->client->dev,
 			"Cannot write register 0x%02x (%d)!\n", reg, err);
 	}
+    //dev_err(&priv->client->dev,"W242 0x%x : 0x%x\n", reg,val);
 	return err;
 }
 
@@ -100,9 +101,10 @@ static int thcv241a_write(const struct thcv241a_priv *priv, unsigned int reg,
 			"Cannot write subdev 0x%02x register 0x%02x (%d)!\n",
 			priv->client->addr, reg, err);
 	}
+    //dev_err(&priv->client->dev,"W241 0x%x : 0x%x\n", reg,val);
 	return err;
 }
-
+/*
 void print_i2c_client_info(struct i2c_client *client) {
     if (client) {
         printk("i2c bus: %s\n", dev_name(&client->dev));
@@ -111,7 +113,8 @@ void print_i2c_client_info(struct i2c_client *client) {
     } else {
         printk("Invalid i2c_client structure.\n");
     }
-}
+}*/
+
 /*
 void print_regmap_info(struct regmap *regmap) {
     if (regmap) {
@@ -213,11 +216,22 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
     err |= thcv241a_write(serpriv,0xFE,0x21);
     err |= thcv241a_write(serpriv,0x76,0x10);
     err |= thcv241a_write(serpriv,0x0F,0x01);
-    err |= thcv241a_write(serpriv,0x11,0x29);
-    err |= thcv241a_write(serpriv,0x12,0xAA);
-    err |= thcv241a_write(serpriv,0x13,0xAA);
-    err |= thcv241a_write(serpriv,0x14,0xAA);
-    err |= thcv241a_write(serpriv,0x15,0x43);
+    
+    if(serpriv->csi_lane_speed == 1500){
+        err |= thcv241a_write(serpriv,0x11,0x29);
+        err |= thcv241a_write(serpriv,0x12,0xAA);
+        err |= thcv241a_write(serpriv,0x13,0xAA);
+        err |= thcv241a_write(serpriv,0x14,0xAA);
+        err |= thcv241a_write(serpriv,0x15,0x43);
+    }else if(serpriv->csi_lane_speed == 1188){
+        err |= thcv241a_write(serpriv,0x11,0x2C);
+        err |= thcv241a_write(serpriv,0x12,0x00);
+        err |= thcv241a_write(serpriv,0x13,0x00);
+        err |= thcv241a_write(serpriv,0x14,0x00);
+        err |= thcv241a_write(serpriv,0x15,0x44);
+    }else{
+        dev_info(dev, "thcv241a_init csi lan speed not supported\n" );
+    }
     err |= thcv241a_write(serpriv,0x16,0x01);
     err |= thcv241a_write(serpriv,0x00,0x00);
     err |= thcv241a_write(serpriv,0x01,0x00);
@@ -233,26 +247,30 @@ static int thcv241a_init(struct thcv242a_priv *despriv,struct thcv241a_priv *ser
     err |= thcv241a_write(serpriv,0x27,0x00);
     err |= thcv241a_write(serpriv,0x1D,0x00);
     err |= thcv241a_write(serpriv,0x1E,0x00);
+    
     if(despriv->trgin_gpio_mode){
         io_type |= 0x1; //polling
-        io_dir &= 0xFE;// output
-    }
-    if(despriv->pdb_gpio_mode){
-        io_type |= 0x2;//polling
-        io_dir &= 0xFD;// output
+        io_dir &= 0xFE;// output bit0-->0
     }
     if(despriv->out1_gpio_mode){
         io_type |= 0x4;//polling
         io_dir |= 0x4;// input
+    }else{
+        io_dir |= 0x4;//Inconsistent with the datasheet, consistent with the tool.
     }
     if(despriv->out2_gpio_mode){
         io_type |= 0x8;//polling
         io_dir |= 0x8;// input
     }
-    
+    io_dir |= 0x20;
+
     err |= thcv241a_write(serpriv,R_GPIO_TYP,io_type);
+    
     err |= thcv241a_write(serpriv,R_GPIO_OEN,io_dir);
+    
     err |= thcv241a_write(serpriv,R_GPIO_CMOSEN,0x0F);//CMOS mode
+    
+    dev_info(dev, "Set 241 IO config 0x%x: 0x%x; 0x%x:0x%x; 0x%x:0x%x \n",R_GPIO_TYP,io_type,R_GPIO_OEN,io_dir,R_GPIO_CMOSEN,0x0F );
     
     dev_info(dev, "%s:  successfully \n", __func__);
     
@@ -265,6 +283,7 @@ static int thcv242a_init_post(struct thcv242a_priv *priv)
 {
     int err = 0;
     unsigned int io_mode = 0;
+    struct thcv241a_priv * serpriv = priv->ser[0];
     struct device *dev = &priv->client->dev;
     dev_info(dev, "%s: begin \n", __func__);
     err |= thcv242a_write(priv,0x0010,0x11);
@@ -287,15 +306,30 @@ static int thcv242a_init_post(struct thcv242a_priv *priv)
     err |= thcv242a_write(priv,0x1605,0x29);
     err |= thcv242a_write(priv,0x1606,0x44);
     err |= thcv242a_write(priv,0x161F,0x00);
-    err |= thcv242a_write(priv,0x1609,0x0E);
-    err |= thcv242a_write(priv,0x160A,0x18);
-    err |= thcv242a_write(priv,0x160B,0x0C);
-    err |= thcv242a_write(priv,0x160D,0x11);
-    err |= thcv242a_write(priv,0x160E,0x06);
-    err |= thcv242a_write(priv,0x160F,0x09);
-    err |= thcv242a_write(priv,0x1610,0x05);
-    err |= thcv242a_write(priv,0x1611,0x1A);
-    err |= thcv242a_write(priv,0x1612,0x0D);
+    if(serpriv->csi_lane_speed == 1500){
+        err |= thcv242a_write(priv,0x1609,0x0E);
+        err |= thcv242a_write(priv,0x160A,0x18);
+        err |= thcv242a_write(priv,0x160B,0x0C);
+        err |= thcv242a_write(priv,0x160D,0x11);
+        err |= thcv242a_write(priv,0x160E,0x06);
+        err |= thcv242a_write(priv,0x160F,0x09);
+        err |= thcv242a_write(priv,0x1610,0x05);
+        err |= thcv242a_write(priv,0x1611,0x1A);
+        err |= thcv242a_write(priv,0x1612,0x0D);
+    }else if(serpriv->csi_lane_speed == 1188){
+        err |= thcv242a_write(priv,0x1609,0x0B);
+        err |= thcv242a_write(priv,0x160A,0x12);
+        err |= thcv242a_write(priv,0x160B,0x0A);
+        err |= thcv242a_write(priv,0x160D,0x0E);
+        err |= thcv242a_write(priv,0x160E,0x03);
+        err |= thcv242a_write(priv,0x160F,0x07);
+        err |= thcv242a_write(priv,0x1610,0x04);
+        err |= thcv242a_write(priv,0x1611,0x14);
+        err |= thcv242a_write(priv,0x1612,0x0B);
+    }else{
+        dev_info(dev, "thcv241a_init csi lan speed not supported\n" );
+    }
+    
     err |= thcv242a_write(priv,0x1703,0x01);
     err |= thcv242a_write(priv,0x1704,0x11);
     
@@ -306,14 +340,12 @@ static int thcv242a_init_post(struct thcv242a_priv *priv)
         io_mode |= 0x40;//Through GPo Mode
     }
     err |= thcv242a_write(priv,R_GPIO23_MODE,io_mode);
-    
+    dev_info(dev, "write 242 --- 0x1003:  0x%x \n", io_mode);
     if(priv->trgin_gpio_mode){
         io_mode |= 0x3; //Through GPI Mode
     }
-    if(priv->pdb_gpio_mode){
-        io_mode |= 0x30;//Through GPI Mode
-    }
     err |= thcv242a_write(priv,R_GPIO01_MODE,io_mode);
+    dev_info(dev, "write 242 --- 0x1004:  0x%x \n", io_mode);
     
     err |= thcv242a_write(priv,0x001B,0x18);
     err |= thcv242a_write(priv,R_2WIREPT_WA_DATA_BYTE,0x10);
@@ -371,19 +403,6 @@ static int thcv242a_parse_dt(struct thcv242a_priv *priv)
 		dev_info(dev, "%s: - csi-lane-count %i\n", __func__, val);
 	}
 
-	err = of_property_read_u32(np, "csi-lane-speed", &val);
-	if(err) {
-		dev_info(dev, "%s: - csi-lane-speed property not found\n", __func__);
-
-		/* default value: 1500 */
-		priv->csi_lane_speed = 1500;
-		dev_info(dev, "%s: - csi-lane-speed set to default val: 1500\n", __func__);
-	} else {
-		/* set csi-lane-speed*/
-		priv->csi_lane_speed = val;
-		dev_info(dev, "%s: - csi-lane-speed %i\n", __func__, val);
-	}
-
     err = of_property_read_u32(np, "coax-num", &val);
 	if(err) {
 		dev_info(dev, "%s: - coax-num property not found\n", __func__);
@@ -415,14 +434,6 @@ static int thcv242a_parse_dt(struct thcv242a_priv *priv)
     } else {
         dev_info(dev, "%s: - camera-i2c-address: 0x%X \n", __func__, val);
         priv->cam_i2c_address=val;
-    }
-    
-    err = of_property_read_u32(np, "pdb-gpio-mode", &val);
-    if (err) {
-       dev_info(dev, "Failed to read pdb-gpio: %d\n", err);
-        priv->pdb_gpio_mode = GPIO_MODE_NO_USE;
-    }else{
-        priv->pdb_gpio_mode = val;
     }
     
     err = of_property_read_u32(np, "trgin-gpio-mode", &val);
@@ -610,8 +621,12 @@ static int thcv241a_parse_dt(struct i2c_client *client,
         thcv241a->csi_lane_speed = val;
         dev_info(dev, "%s: - csi-lane-speed %i\n", __func__, val);
     }
-
-
+    if(thcv241a->csi_lane_speed != 1500 && thcv241a->csi_lane_speed != 1188)
+    {
+        dev_err(dev, "%s: - csi-lane-speed %i not supported,will exit!\n", __func__, val);
+        goto ERR;
+    }
+    
     err = thcv241a_i2c_client(priv, 0,  thcv241a->i2c_address);
     if(err) {
         dev_info(dev, "%s: - thcv241a_i2c_client failed\n",

@@ -1282,7 +1282,13 @@ static int mvcam_probe(struct i2c_client *client,
 	dev_info(dev, "veye mv series camera driver version: %02x.%02x.%02x\n",
 		DRIVER_VERSION >> 16,
 		(DRIVER_VERSION & 0xff00) >> 8,
-		DRIVER_VERSION & 0x00ff);    
+		DRIVER_VERSION & 0x00ff);
+        
+    if (request_module("veye_vbyone") != 0) {
+        dev_err(dev, "Unable to load veye_vbyone driver,will go on\n");
+        //return -ENODEV;
+    }
+    
 	mvcam = devm_kzalloc(&client->dev, sizeof(struct mvcam), GFP_KERNEL);
 	if (!mvcam)
 		return -ENOMEM;
