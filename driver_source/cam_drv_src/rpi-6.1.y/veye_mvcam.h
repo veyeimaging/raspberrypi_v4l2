@@ -23,7 +23,6 @@
 #define Error_code 0x0024
 #define Format_cap 0x0028
 
-
 #define Image_Acquisition 0x400
 #define Trigger_Mode 0x404
 #define Trigger_Source 0x408
@@ -43,6 +42,7 @@
 #define User_define_zone1 0x440
 #define User_define_zone2 0x444
 #define User_define_zone3 0x448
+#define Slave_mode 0x460
 
 #define Test_Image_Selector 0x800
 #define Pixel_Format 0x804
@@ -58,7 +58,9 @@
 #define Data_shift 0x82C
 #define Black_Level 0x830
 #define ReadOut_Mode 0x834
-
+#define Lane_Num 0x83C
+#define MIPI_DataRate 0x840
+    
 #define ISP_module_ctrl 0xC00
 #define Exposure_Mode 0xC04
 #define Target_Brightness 0xC08
@@ -143,12 +145,13 @@ enum enum_TriggerSrc{
 #define MV_MIPI_IMX264M 0x0264
 #define MV_MIPI_IMX287M 0x0287
 #define RAW_MIPI_SC132M 0x8132
+#define RAW_MIPI_IMX462M 0x8462
+#define RAW_MIPI_AR0234M 0x8234
 
-#define MV_CAM_PIXEL_RATE	750000000 //750M
-/* MV mipi clk is 742.5Mhz */
-#define MVCAM_DEFAULT_LINK_FREQ     742500000
-/*RAW mipi clk is 559Mhz */
-#define RAWCAM_DEFAULT_LINK_FREQ	559000000
+/* MV mipi clk is 1.5Gbps */
+#define MVCAM_DEFAULT_LINK_FREQ     1500000000
+//pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
+#define MV_CAM_PIXEL_RATE	750000000 //1.5Gbps*2*2/8=750M
 
 #define MV_CAM_DEF_FPS      22U
 
@@ -166,6 +169,10 @@ enum enum_TriggerSrc{
 #define RAW_SC132M_ROI_H_MIN    64U
 #define MV_IMX287M_ROI_W_MIN    264U
 #define MV_IMX287M_ROI_H_MIN    64U
+#define RAW_IMX462M_ROI_W_MIN    368U
+#define RAW_IMX462M_ROI_H_MIN    304U
+#define RAW_AR0234M_ROI_W_MIN    64U
+#define RAW_AR0234M_ROI_H_MIN    64U
 
 #define MV_CAM_ROI_W_ALIGN  8U
 #define MV_CAM_ROI_H_ALIGN  4U

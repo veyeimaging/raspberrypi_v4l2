@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Based on Sony IMX219 camera driver
- * Copyright (C) 2019, Raspberry Pi (Trading) Ltd
+ * Copyright (C) 2022, www.veye.cc
  *
  */
 #include "veye_mvcam.h"
@@ -21,7 +20,7 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
-#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x03) 
+#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x04) 
 
 //reserved
 /* Embedded metadata stream structure */
@@ -95,7 +94,6 @@ struct mvcam {
 	struct v4l2_subdev sd;
 	struct media_pad pad[NUM_PADS];
 
-    
     u32    model_id; 
 	struct gpio_desc *reset_gpio;
     struct regulator_bulk_data supplies[MVCAM_NUM_SUPPLIES];
@@ -116,11 +114,13 @@ struct mvcam {
     u32 h_flip;
     u32 v_flip;
     
+    u32 lane_num;
+    u32 mipi_datarate;
+    
 	struct v4l2_ctrl_handler ctrl_handler;
     struct v4l2_ctrl *ctrls[MVCAM_MAX_CTRLS];
 	/* V4L2 Controls */
     struct v4l2_ctrl *frmrate;
-    
     
 	/*
 	 * Mutex for serialized access:
@@ -905,6 +905,30 @@ err:
 	return -ENODEV;
 }
 
+static void mvcam_get_mipifeature(struct mvcam *mvcam)
+{
+    u32 lane_num;
+    u32 mipi_datarate;
+    struct i2c_client *client = mvcam->client;
+    mvcam_read(client, Lane_Num, &lane_num);
+    if(lane_num == 4){
+        mvcam->lane_num = 4;
+    }else{
+        mvcam->lane_num = 2;
+    }
+    
+    mvcam_read(client, MIPI_DataRate, &mipi_datarate);
+    if(mipi_datarate == 0xFFFFFFFF)
+        mipi_datarate = MVCAM_DEFAULT_LINK_FREQ;
+    else
+        mipi_datarate *=1000;//register value is kbps
+    
+    mvcam->mipi_datarate = mipi_datarate;
+    
+    v4l2_dbg(1, debug, mvcam->client, "%s: lane num %d, datarate %d bps\n",
+					__func__, mvcam->lane_num,mvcam->mipi_datarate);
+    return;
+}
 
 /* Start streaming */
 static int mvcam_start_streaming(struct mvcam *mvcam)
@@ -1225,6 +1249,14 @@ static int mvcam_identify_module(struct mvcam * mvcam)
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV_MIPI_IMX287M\n");
             break;
+        case RAW_MIPI_IMX462M:
+            mvcam->model_id = device_id;
+            dev_info(&client->dev, "camera is: RAW_MIPI_IMX462M\n");
+            break;
+        case RAW_MIPI_AR0234M:
+            mvcam->model_id = device_id;
+            dev_info(&client->dev, "camera is: RAW_MIPI_AR0234M\n");
+            break;
         default:
             dev_err(&client->dev, "camera id do not support: %x \n",device_id);
 		return -EIO;
@@ -1240,6 +1272,10 @@ static int mvcam_identify_module(struct mvcam * mvcam)
 
 static int mvcam_check_hwcfg(struct device *dev)
 {
+    struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mvcam *mvcam = to_mvcam(sd);
+    
 	struct fwnode_handle *endpoint;
 	struct v4l2_fwnode_endpoint ep_cfg = {
 		.bus_type = V4L2_MBUS_CSI2_DPHY
@@ -1258,8 +1294,8 @@ static int mvcam_check_hwcfg(struct device *dev)
 	}
 
 	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
-		dev_err(dev, "only 2 data lanes are currently supported\n");
+	if (ep_cfg.bus.mipi_csi2.num_data_lanes != mvcam->lane_num) {
+		dev_err(dev, "dts lane num %d mismatch camera data lane num %d\n",ep_cfg.bus.mipi_csi2.num_data_lanes,mvcam->lane_num);
 		goto error_out;
 	}
 	ret = 0;
@@ -1297,8 +1333,8 @@ static int mvcam_probe(struct i2c_client *client,
 	mvcam->client = client;
 
     /* Check the hardware configuration in device tree */
-	if (mvcam_check_hwcfg(dev))
-		return -EINVAL;
+	/*if (mvcam_check_hwcfg(dev))
+		return -EINVAL;*/
     
 	ret = mvcam_get_regulators(mvcam);
 	if (ret) {
@@ -1325,13 +1361,16 @@ static int mvcam_probe(struct i2c_client *client,
 		ret = -ENODEV;
 		goto error_power_off;
 	}
-
+    mvcam_get_mipifeature(mvcam);
+    /* Check the hardware configuration in device tree */
+    if(mvcam_check_hwcfg(dev))
+		goto error_power_off;
+    
     mvcam_read(client, Sensor_Width, &mvcam->max_width);
     mvcam_read(client, Sensor_Height, &mvcam->max_height);
     if(mvcam->model_id == MV_MIPI_IMX178M){
         mvcam->min_width = MV_IMX178M_ROI_W_MIN;
         mvcam->min_height = MV_IMX178M_ROI_H_MIN;
-        
     }else if(mvcam->model_id == MV_MIPI_SC130M){
         mvcam->min_width = MV_SC130M_ROI_W_MIN;
         mvcam->min_height = MV_SC130M_ROI_H_MIN;
@@ -1350,6 +1389,12 @@ static int mvcam_probe(struct i2c_client *client,
     }else if(mvcam->model_id == MV_MIPI_IMX287M){
         mvcam->min_width = MV_IMX287M_ROI_W_MIN;
         mvcam->min_height = MV_IMX287M_ROI_H_MIN;
+    }else if(mvcam->model_id == RAW_MIPI_IMX462M){
+        mvcam->min_width = RAW_IMX462M_ROI_W_MIN;
+        mvcam->min_height = RAW_IMX462M_ROI_H_MIN;
+    }else if(mvcam->model_id == RAW_MIPI_AR0234M){
+        mvcam->min_width = RAW_AR0234M_ROI_W_MIN;
+        mvcam->min_height = RAW_AR0234M_ROI_H_MIN;
     }
     v4l2_dbg(1, debug, mvcam->client, "%s: max width %d; max height %d\n",
 					__func__, mvcam->max_width,mvcam->max_height);
