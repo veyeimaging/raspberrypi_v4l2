@@ -255,8 +255,8 @@ static void veyecam2m_set_default_format(struct veyecam2m *veyecam2m)
 	struct v4l2_mbus_framefmt *fmt;
     VEYE_TRACE
 	fmt = &veyecam2m->fmt;
-	fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
-	fmt->colorspace = V4L2_COLORSPACE_SRGB;
+	fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
+	fmt->colorspace = V4L2_COLORSPACE_REC709;
 /*	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
 							  fmt->colorspace,
@@ -276,8 +276,9 @@ static int veyecam2m_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	/* Initialize try_fmt */
 	try_fmt->width = supported_modes[0].width;
 	try_fmt->height = supported_modes[0].height;
-	try_fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	try_fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	try_fmt->field = V4L2_FIELD_NONE;
+	try_fmt->colorspace = V4L2_COLORSPACE_REC709;
 
 	return 0;
 }
@@ -351,7 +352,7 @@ static int veyecam2m_enum_mbus_code(struct v4l2_subdev *sd,
     VEYE_TRACE
     if (code->index > 0)
             return -EINVAL;
-     code->code = MEDIA_BUS_FMT_UYVY8_2X8;
+     code->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	return 0;
 }
 
@@ -360,7 +361,7 @@ static int veyecam2m_enum_frame_size(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
     VEYE_TRACE
-	if (fse->code != MEDIA_BUS_FMT_UYVY8_2X8)
+	if (fse->code != MEDIA_BUS_FMT_UYVY8_1X16)
 		return -EINVAL;
 
 	if (fse->index >= ARRAY_SIZE(supported_modes))
@@ -390,8 +391,9 @@ static int __veyecam2m_get_pad_format(struct veyecam2m *veyecam2m,
 	} else {
 		fmt->format.width = mode->width;
         fmt->format.height = mode->height;
-        fmt->format.code = MEDIA_BUS_FMT_UYVY8_2X8;
+        fmt->format.code = MEDIA_BUS_FMT_UYVY8_1X16;
 		fmt->format.field = V4L2_FIELD_NONE;
+		fmt->format.colorspace = V4L2_COLORSPACE_REC709;
 	}
 	return 0;
 }
@@ -438,10 +440,11 @@ static int veyecam2m_set_pad_format(struct v4l2_subdev *sd,
            goto error;
          }
 
-	fmt->format.code = MEDIA_BUS_FMT_UYVY8_2X8;
+	fmt->format.code = MEDIA_BUS_FMT_UYVY8_1X16;
 	fmt->format.width = new_mode->width;
 	fmt->format.height = new_mode->height;
 	fmt->format.field = V4L2_FIELD_NONE;
+	fmt->format.colorspace = V4L2_COLORSPACE_REC709;
     veyecam2m->mode = new_mode;
 	/* Apply default values of current mode */
 	reg_list = &veyecam2m->mode->reg_list;

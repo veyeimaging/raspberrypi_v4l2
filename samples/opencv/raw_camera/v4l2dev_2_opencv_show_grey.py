@@ -3,12 +3,15 @@ import argparse
 import subprocess
 import cv2
 
-def read_cam(width, height, fps):
+def read_cam(width, height, fps, ctldev):
     
-    v4l2_cmd = f"v4l2-ctl --set-selection=target=crop,top=0,left=0,width={width},height={height}"
+    v4l2_cmd = f"v4l2-ctl -d {ctldev} --set-ctrl roi_x=0"
     subprocess.run(v4l2_cmd, shell=True)
-    
-    v4l2_cmd = f"v4l2-ctl --set-ctrl frame_rate={fps}"
+    v4l2_cmd = f"v4l2-ctl -d {ctldev} --set-ctrl roi_y=0"
+    subprocess.run(v4l2_cmd, shell=True)
+    v4l2_cmd = f"v4l2-ctl -d /dev/video0 --set-fmt-video=width={width},height={height}"
+    subprocess.run(v4l2_cmd, shell=True)
+    v4l2_cmd = f"v4l2-ctl -d {ctldev} --set-ctrl frame_rate={fps}"
     subprocess.run(v4l2_cmd, shell=True)
     
     cap = cv2.VideoCapture(f"v4l2src io-mode=dmabuf device=/dev/video0 ! video/x-raw, format=(string)GRAY8, width=(int){width}, height=(int){height} ! appsink")
@@ -28,6 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=1080, help='width of the video stream')
     parser.add_argument('--height', type=int, default=1080, help='height of the video stream')
     parser.add_argument('--fps', type=int, default=30, help='fps of the video stream')
+    parser.add_argument('--ctldev', type=str, default='/dev/video0', help='For rpi5 only,subdevice for param setting')
     args = parser.parse_args()
 
-    read_cam(args.width, args.height, args.fps)
+    read_cam(args.width, args.height, args.fps, args.ctldev)

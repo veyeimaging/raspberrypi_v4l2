@@ -387,7 +387,7 @@ static void csimx307_set_default_format(struct csimx307 *csimx307)
 	struct v4l2_mbus_framefmt *fmt;
     VEYE_TRACE
 	fmt = &csimx307->fmt;
-	fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 /*	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -408,7 +408,7 @@ static int csimx307_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	/* Initialize try_fmt */
 	try_fmt->width = supported_modes[0].width;
 	try_fmt->height = supported_modes[0].height;
-	try_fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	try_fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	try_fmt->field = V4L2_FIELD_NONE;
 
 	return 0;
@@ -483,7 +483,7 @@ static int csimx307_enum_mbus_code(struct v4l2_subdev *sd,
     VEYE_TRACE
     if (code->index > 0)
             return -EINVAL;
-     code->code = MEDIA_BUS_FMT_UYVY8_2X8;
+     code->code = MEDIA_BUS_FMT_UYVY8_1X16;
 	return 0;
 }
 
@@ -492,7 +492,7 @@ static int csimx307_enum_frame_size(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
     VEYE_TRACE
-	if (fse->code != MEDIA_BUS_FMT_UYVY8_2X8)
+	if (fse->code != MEDIA_BUS_FMT_UYVY8_1X16)
 		return -EINVAL;
 
 	if (fse->index >= ARRAY_SIZE(supported_modes))
@@ -522,7 +522,7 @@ static int __csimx307_get_pad_format(struct csimx307 *csimx307,
 	} else {
 		fmt->format.width = mode->width;
         fmt->format.height = mode->height;
-        fmt->format.code = MEDIA_BUS_FMT_UYVY8_2X8;
+        fmt->format.code = MEDIA_BUS_FMT_UYVY8_1X16;
 		fmt->format.field = V4L2_FIELD_NONE;
 	}
 	return 0;
@@ -570,7 +570,7 @@ static int csimx307_set_pad_format(struct v4l2_subdev *sd,
        goto error;
      }
     debug_printk("set format  %d ,width %d ,height %d \n", mode,new_mode->width,new_mode->height);
-	fmt->format.code = MEDIA_BUS_FMT_UYVY8_2X8;
+	fmt->format.code = MEDIA_BUS_FMT_UYVY8_1X16;
 	fmt->format.width = new_mode->width;
 	fmt->format.height = new_mode->height;
 	fmt->format.field = V4L2_FIELD_NONE;
@@ -1057,7 +1057,10 @@ static int csimx307_probe(struct i2c_client *client)
 
 	/* Initialize default format */
 	csimx307_set_default_format(csimx307);
-    
+    // stop stream here
+	csimx307_stop_streaming(csimx307);
+	csimx307->streaming = 0;
+	
 	ret = media_entity_pads_init(&csimx307->sd.entity, 1, &csimx307->pad);
 	if (ret)
 		goto error_handler_free;
