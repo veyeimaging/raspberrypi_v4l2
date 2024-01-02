@@ -29,7 +29,7 @@
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
-						clock-noncontinuous;
+						clock-continuous;
 						link-frequencies =
 							/bits/ 64 <297000000>;
 					};
@@ -49,7 +49,7 @@
 					remote-endpoint = <&cam_endpoint>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
-					clock-noncontinuous;
+					clock-continuous;
 				};
 			};
 		};
@@ -78,6 +78,7 @@
 	};
 
 	__overrides__ {
+		media-controller = <&csi>,"brcm,media-controller?";
 		rotation = <&cam_node>,"rotation:0";
 		orientation = <&cam_node>,"orientation:0";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_csi_dsi0>,

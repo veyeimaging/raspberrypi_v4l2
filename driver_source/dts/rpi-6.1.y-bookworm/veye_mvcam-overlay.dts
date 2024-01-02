@@ -82,6 +82,7 @@
 		};
 	};
 	__overrides__ {
+		media-controller = <&csi>,"brcm,media-controller?";
 		rotation = <&cam_node>,"rotation:0";
 		orientation = <&cam_node>,"orientation:0";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_csi_dsi0>,
