@@ -20,7 +20,12 @@
 				reg = <0x3b>;
 				status = "okay";
 
+				clocks = <&cam1_clk>;
+				clock-names = "xclk";
 
+				VANA-supply = <&cam1_reg>;	/* 2.8v */
+				VDIG-supply = <&cam_dummy_reg>;	/* 1.8v */
+				VDDL-supply = <&cam_dummy_reg>;	/* 1.2v */
 		            rotation = <0>;
 		            orientation = <2>;
 
@@ -29,7 +34,7 @@
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
-						clock-continuous;
+						clock-noncontinuous;
 						link-frequencies =
 							/bits/ 64 <297000000>;
 					};
@@ -49,7 +54,7 @@
 					remote-endpoint = <&cam_endpoint>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
-					clock-continuous;
+					clock-noncontinuous;
 				};
 			};
 		};
