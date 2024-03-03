@@ -94,7 +94,9 @@ typedef enum
     VerTotalTime_L = 0x17,
     HorTotalTime_H = 0x18,
     HorTotalTime_L = 0x19,
-    
+
+    USER_CSI2_En = 0xD3,
+    MIPI_Clk_Continous = 0xD4,
     //for arm part
     ARM_VER_L = 0x0100,
     ARM_VER_H = 0x0101,
@@ -161,7 +163,9 @@ enum {
 
 static struct csimx307_reg csimx307_start_regs[] = {
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_START},
+	{MIPI_Clk_Continous,0x0},//discontinous mode for rpi5
     {Csi2_Enable,0x01},
+	{USER_CSI2_En,0x01},
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STREAM},
 	//{CS307_TABLE_END, 0x00 }
 };
@@ -169,6 +173,7 @@ static struct csimx307_reg csimx307_start_regs[] = {
 static struct csimx307_reg csimx307_stop_regs[] = {
 	{CS307_TABLE_WAIT_MS, CS307_WAIT_MS_STOP},
     {Csi2_Enable,0x00},
+	{USER_CSI2_En,0x00},
     {CS307_TABLE_WAIT_MS, CS307_WAIT_MS_CMD},
 	//{CS307_TABLE_END, 0x00 }
 };
