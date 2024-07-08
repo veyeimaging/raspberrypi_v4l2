@@ -20,9 +20,13 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
-#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x04) 
+#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x05) 
+/*
+version log v1.01.05
+1. create sysfs node for veye_mvcam under /sys/bus/i2c/devices/i2c-X/X-003b/veye_mvcam
+	X is i2c bus number here.
+*/
 
-//reserved
 /* Embedded metadata stream structure */
 #define VEYE_MV_EMBEDDED_LINE_WIDTH 16384
 #define VEYE_MV_NUM_EMBEDDED_LINES 1
@@ -93,6 +97,7 @@ static const char * const mvcam_supply_name[] = {
 struct mvcam {
 	struct v4l2_subdev sd;
 	struct media_pad pad[NUM_PADS];
+	struct kobject kobj;
 
     u32    model_id; 
 	struct gpio_desc *reset_gpio;
@@ -116,7 +121,8 @@ struct mvcam {
     
     u32 lane_num;
     u32 mipi_datarate;
-    
+    u8 camera_model[24];
+
 	struct v4l2_ctrl_handler ctrl_handler;
     struct v4l2_ctrl *ctrls[MVCAM_MAX_CTRLS];
 	/* V4L2 Controls */
@@ -1224,45 +1230,56 @@ static int mvcam_identify_module(struct mvcam * mvcam)
         case MV_MIPI_IMX178M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV-MIPI-IMX178M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX178M");
             break; 
         case MV_MIPI_IMX296M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is：MV-MIPI-IMX296M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX296M");
             break; 
         case MV_MIPI_SC130M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV-MIPI-SC130M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-SC130M");
             break; 
         case MV_MIPI_IMX265M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV-MIPI-IMX265M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX265M");
             break; 
         case MV_MIPI_IMX264M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV-MIPI-IMX264M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX264M");
             break; 
         case RAW_MIPI_SC132M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: RAW-MIPI-SC132M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-SC132M");
             break;
         case MV_MIPI_IMX287M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV_MIPI_IMX287M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX287M");
             break;
         case RAW_MIPI_IMX462M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: RAW_MIPI_IMX462M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-IMX462M");
             break;
         case RAW_MIPI_AR0234M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: RAW_MIPI_AR0234M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-AR0234M");
             break;
         case RAW_MIPI_SC535M:
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: RAW-MIPI-SC535M\n");
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "MV-MIPI-SC535M");
             break;
         default:
             dev_err(&client->dev, "camera id do not support: %x \n",device_id);
+			snprintf(mvcam->camera_model, sizeof(mvcam->camera_model), "%s", "unknown");
 		return -EIO;
     }
     
@@ -1311,6 +1328,57 @@ error_out:
 	return ret;
 }
 
+static ssize_t model_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+    struct mvcam *cam = container_of(kobj, struct mvcam, kobj);
+    return sprintf(buf, "%s\n", cam->camera_model);
+}
+
+static ssize_t width_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+    struct mvcam *cam = container_of(kobj, struct mvcam, kobj);
+    return sprintf(buf, "%d\n", cam->roi.width);
+}
+
+static ssize_t height_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+    struct mvcam *cam = container_of(kobj, struct mvcam, kobj);
+    return sprintf(buf, "%d\n", cam->roi.height);
+}
+
+static ssize_t fps_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+    struct mvcam *cam = container_of(kobj, struct mvcam, kobj);
+    return sprintf(buf, "%d\n", cam->cur_fps);
+}
+
+static struct kobj_attribute model_attribute = __ATTR(camera_model, 0444, model_show, NULL);
+static struct kobj_attribute width_attribute = __ATTR(width, 0444, width_show, NULL);
+static struct kobj_attribute height_attribute = __ATTR(height, 0444, height_show, NULL);
+static struct kobj_attribute fps_attribute = __ATTR(fps, 0444, fps_show, NULL);
+
+
+static struct attribute *mvcam_attrs[] = {
+    &model_attribute.attr,
+    &width_attribute.attr,
+    &height_attribute.attr,
+	&fps_attribute.attr,
+    NULL,
+};
+
+static struct attribute_group mvcam_attr_group = {
+    .attrs = mvcam_attrs,
+};
+
+static const struct attribute_group *mvcam_attr_groups[] = {
+    &mvcam_attr_group,
+    NULL,
+};
+
+static const struct kobj_type mvcam_ktype = {
+    .sysfs_ops = &kobj_sysfs_ops,
+    .default_groups = mvcam_attr_groups,
+};
 
 static int mvcam_probe(struct i2c_client *client)
 {
@@ -1431,6 +1499,12 @@ static int mvcam_probe(struct i2c_client *client)
 		goto error_power_off;
 	}
 
+	ret = kobject_init_and_add(&mvcam->kobj, &mvcam_ktype, &client->dev.kobj, "veye_mvcam");
+    if (ret) {
+        dev_err(dev, "kobject_init_and_add failed\n");
+        goto error_media_entity;
+    }
+
 	ret = v4l2_async_register_subdev_sensor(&mvcam->sd);
 	if (ret)
 		goto error_media_entity;
@@ -1438,6 +1512,9 @@ static int mvcam_probe(struct i2c_client *client)
 	return 0;
 
 error_media_entity:
+
+    kobject_put(&mvcam->kobj);
+
 	media_entity_cleanup(&mvcam->sd.entity);
 
 	mvcam_free_controls(mvcam);
@@ -1457,6 +1534,9 @@ static void mvcam_remove(struct i2c_client *client)
 	struct mvcam *mvcam = to_mvcam(sd);
 
 	v4l2_async_unregister_subdev(sd);
+
+    kobject_put(&mvcam->kobj);
+
 	media_entity_cleanup(&sd->entity);
 	mvcam_free_controls(mvcam);
 
