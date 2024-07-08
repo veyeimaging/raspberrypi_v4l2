@@ -1225,6 +1225,14 @@ static int mvcam_identify_module(struct mvcam * mvcam)
             mvcam->model_id = device_id;
             dev_info(&client->dev, "camera is: MV_MIPI_IMX287M\n");
             break;
+        case RAW_MIPI_IMX462M:
+            mvcam->model_id = device_id;
+            dev_info(&client->dev, "camera is: RAW_MIPI_IMX462M\n");
+            break;
+        case RAW_MIPI_AR0234M:
+            mvcam->model_id = device_id;
+            dev_info(&client->dev, "camera is: RAW_MIPI_AR0234M\n");
+            break;
         default:
             dev_err(&client->dev, "camera id do not support: %x \n",device_id);
 		return -EIO;
@@ -1344,6 +1352,12 @@ static int mvcam_probe(struct i2c_client *client,
     }else if(mvcam->model_id == MV_MIPI_IMX287M){
         mvcam->min_width = MV_IMX287M_ROI_W_MIN;
         mvcam->min_height = MV_IMX287M_ROI_H_MIN;
+    }else if(mvcam->model_id == RAW_MIPI_IMX462M){
+        mvcam->min_width = RAW_IMX462M_ROI_W_MIN;
+        mvcam->min_height = RAW_IMX462M_ROI_H_MIN;
+    }else if(mvcam->model_id == RAW_MIPI_AR0234M){
+        mvcam->min_width = RAW_AR0234M_ROI_W_MIN;
+        mvcam->min_height = RAW_AR0234M_ROI_H_MIN;
     }
     v4l2_dbg(1, debug, mvcam->client, "%s: max width %d; max height %d\n",
 					__func__, mvcam->max_width,mvcam->max_height);
