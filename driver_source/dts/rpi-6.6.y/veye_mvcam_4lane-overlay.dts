@@ -15,7 +15,7 @@
 			#size-cells = <0>;
 			status = "okay";
 
-			cam_node: veyemvcam@3b {
+			veyemvcam_node: veyemvcam@3b {
 				compatible = "veye,mvcam";
 				reg = <0x3b>;
 				status = "okay";
@@ -30,7 +30,7 @@
                 orientation = <2>;
 
 				port {
-					cam_endpoint: endpoint {
+					veye_mvcam_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
@@ -51,7 +51,7 @@
 
 			port {
 				csi_ep: endpoint {
-					remote-endpoint = <&cam_endpoint>;
+					remote-endpoint = <&veye_mvcam_0>;
 					clock-lanes = <0>;
 					data-lanes = <1 2 3 4>;
 					clock-noncontinuous;
@@ -82,16 +82,17 @@
 		};
 	};
 	__overrides__ {
-		rotation = <&cam_node>,"rotation:0";
-		orientation = <&cam_node>,"orientation:0";
+
+		media-controller = <&csi>,"brcm,media-controller?";
+		rotation = <&veyemvcam_node>,"rotation:0";
+		orientation = <&veyemvcam_node>,"orientation:0";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_csi_dsi0>,
 		       <&csi_frag>, "target:0=",<&csi0>,
 		       <&clk_frag>, "target:0=",<&cam0_clk>,
-		       <&cam_node>, "clocks:0=",<&cam0_clk>,
-		       <&cam_node>, "VANA-supply:0=",<&cam0_reg>;
+
+		       <&veyemvcam_node>, "clocks:0=",<&cam0_clk>,
+		       <&veyemvcam_node>, "VANA-supply:0=",<&cam0_reg>;
+
 	};
 };
 
-&cam_endpoint {
-	remote-endpoint = <&csi_ep>;
-};

@@ -15,7 +15,7 @@
 			#size-cells = <0>;
 			status = "okay";
 
-			cam_node: csimx307@3b {
+			csimx307_node: csimx307@3b {
 				compatible = "veye,csimx307";
 				reg = <0x3b>;
 				status = "okay";
@@ -30,7 +30,7 @@
 		            orientation = <2>;
 
 				port {
-					cam_endpoint: endpoint {
+					csimx307_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
@@ -51,7 +51,7 @@
 
 			port {
 				csi_ep: endpoint {
-					remote-endpoint = <&cam_endpoint>;
+					remote-endpoint = <&csimx307_0>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
 					clock-noncontinuous;
@@ -85,16 +85,13 @@
 
 	__overrides__ {
 		media-controller = <&csi>,"brcm,media-controller?";
-		rotation = <&cam_node>,"rotation:0";
-		orientation = <&cam_node>,"orientation:0";
+		rotation = <&csimx307_node>,"rotation:0";
+		orientation = <&csimx307_node>,"orientation:0";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_csi_dsi0>,
 		       <&csi_frag>, "target:0=",<&csi0>,
 		       <&clk_frag>, "target:0=",<&cam0_clk>,
-		       <&cam_node>, "clocks:0=",<&cam0_clk>,
-		       <&cam_node>, "VANA-supply:0=",<&cam0_reg>;
+		       <&csimx307_node>, "clocks:0=",<&cam0_clk>,
+		       <&csimx307_node>, "VANA-supply:0=",<&cam0_reg>;
 	};
 };
 
-&cam_endpoint {
-	remote-endpoint = <&csi_ep>;
-};
