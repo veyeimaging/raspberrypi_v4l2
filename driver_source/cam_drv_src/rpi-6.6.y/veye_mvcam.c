@@ -18,7 +18,9 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mediabus.h>
+#include <media/v4l2-event.h>
 #include <asm/unaligned.h>
+
 
 #define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x05) 
 /*
@@ -94,6 +96,24 @@ static const char * const mvcam_supply_name[] = {
 
 #define MVCAM_NUM_SUPPLIES ARRAY_SIZE(mvcam_supply_name)
 
+
+//used for mvcam->ctrls[i] index, this must obey the same order as mvcam_v4l2_ctrls 
+enum enum_v4l2_ctrls_index{
+    CID_LINK_FREQ,
+    CID_PIXEL_RATE,
+    CID_HBLANK,
+    CID_VBLANK,
+	CID_EXPOSURE,
+	CID_ANALOGUE_GAIN,
+	CID_VEYE_MV_TRIGGER_MODE,
+	CID_VEYE_MV_TRIGGER_SRC,
+	CID_VEYE_MV_SOFT_TRGONE,
+	CID_VEYE_MV_FRAME_RATE,
+	CID_VEYE_MV_ROI_X,
+	CID_VEYE_MV_ROI_Y,
+	MVCAM_MAX_CTRLS,
+};
+
 struct mvcam {
 	struct v4l2_subdev sd;
 	struct media_pad pad[NUM_PADS];
@@ -121,12 +141,17 @@ struct mvcam {
     
     u32 lane_num;
     u32 mipi_datarate;
-    u8 camera_model[24];
-
+	u8 camera_model[24];
+	u64 pixelrate;
+	u32 hblank;//RO
+	u32 hmax;//RO
+    u32 vblank_lines;
+	u32 exp_val;//just save the value
+	u32 again_val;//just save the value
 	struct v4l2_ctrl_handler ctrl_handler;
     struct v4l2_ctrl *ctrls[MVCAM_MAX_CTRLS];
 	/* V4L2 Controls */
-    struct v4l2_ctrl *frmrate;
+   // struct v4l2_ctrl *frmrate;
     
 	/*
 	 * Mutex for serialized access:
@@ -292,7 +317,7 @@ static int mvcam_setroi(struct mvcam *mvcam)
     mvcam->max_fps = fps_reg/100;
     mvcam_read(client, Framerate,&fps_reg);
     mvcam->cur_fps = fps_reg/100;
-    v4l2_ctrl_modify_range(mvcam->frmrate, 1, mvcam->max_fps, 1, mvcam->cur_fps);
+    __v4l2_ctrl_modify_range(mvcam->ctrls[CID_VEYE_MV_FRAME_RATE], 1, mvcam->max_fps, 1, mvcam->cur_fps);
     
 //    dev_info(&client->dev,
 //			 "max fps is %d,cur fps %d\n",
@@ -319,6 +344,22 @@ static int mvcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
         ret = mvcam_read(client, Framerate,&ctrl->val);
         ctrl->val = ctrl->val/100;
         mvcam->cur_fps = ctrl->val;
+		break;
+	case V4L2_CID_HBLANK:
+		ctrl->val = mvcam->hblank;
+		ret = 0;
+		break;
+	case V4L2_CID_VBLANK:
+		ctrl->val = mvcam->vblank_lines;
+		ret = 0;
+		break;
+	case V4L2_CID_EXPOSURE:
+		ctrl->val = mvcam->exp_val;
+		ret = 0;
+		break;
+	case V4L2_CID_ANALOGUE_GAIN:
+		ctrl->val = mvcam->again_val;
+		ret = 0;
 		break;
 	default:
 		dev_info(&client->dev,
@@ -370,6 +411,22 @@ static int mvcam_s_ctrl(struct v4l2_ctrl *ctrl)
 			 ctrl->val, mvcam->roi.top);
         ret = 0;
 		break;
+	case V4L2_CID_HBLANK:
+		mvcam->hblank = ctrl->val;
+		ret = 0;
+		break;
+	case V4L2_CID_VBLANK:
+		mvcam->vblank_lines = ctrl->val;
+		ret = 0;
+		break;
+	case V4L2_CID_EXPOSURE:
+		mvcam->exp_val = ctrl->val;
+		ret = 0;
+		break;
+	case V4L2_CID_ANALOGUE_GAIN:
+		mvcam->again_val = ctrl->val;
+		ret = 0;
+		break;
 	default:
 		dev_info(&client->dev,
 			 "mvcam_s_ctrl ctrl(id:0x%x,val:0x%x) is not handled\n",
@@ -387,6 +444,7 @@ static const struct v4l2_ctrl_ops mvcam_ctrl_ops = {
 	.s_ctrl = mvcam_s_ctrl,
 };
 
+//must add to enum_v4l2_ctrls_index once you add a new ctrl here
 static struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
     //standard v4l2_ctrls
     {
@@ -404,7 +462,7 @@ static struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 	{
 		.ops = &mvcam_ctrl_ops,
 		.id = V4L2_CID_PIXEL_RATE,
-		.name = NULL,//kernel fill fill it
+		.name = NULL,//kernel will fill it
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.def = MV_CAM_PIXEL_RATE,
 		.min = MV_CAM_PIXEL_RATE,
@@ -412,6 +470,51 @@ static struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.step = 1,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
 	},
+	{
+		.ops = &mvcam_ctrl_ops,
+		.id = V4L2_CID_HBLANK,
+		.name = NULL,//kernel will fill it
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.def = MV_CAM_H_BLANK_DEFAULT,
+		.min = MV_CAM_H_BLANK_DEFAULT,
+		.max = MV_CAM_H_BLANK_DEFAULT,
+		.step = 1,
+		.flags = V4L2_CTRL_FLAG_READ_ONLY,
+	},
+	{
+		.ops = &mvcam_ctrl_ops,
+		.id = V4L2_CID_VBLANK,
+		.name = NULL,//kernel will fill it
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.def = MV_CAM_V_BLANK_DEFAULT,
+		.min = MV_CAM_V_BLANK_MIN,
+		.max = MV_CAM_V_BLANK_MAX,
+		.step = 1,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	},
+	{
+		.ops = &mvcam_ctrl_ops,
+		.id = V4L2_CID_EXPOSURE,
+		.name = NULL,//kernel will fill it
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.def = MV_CAM_EXPOSURE_DEF,
+		.min = MV_CAM_EXPOSURE_MIN,
+		.max = MV_CAM_EXPOSURE_MAX,
+		.step = 1,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	},
+	{
+		.ops = &mvcam_ctrl_ops,
+		.id = V4L2_CID_ANALOGUE_GAIN,
+		.name = NULL,//kernel will fill it
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.def = MV_CAM_AGAIN_DEF,
+		.min = MV_CAM_AGAIN_MIN,
+		.max = MV_CAM_AGAIN_MAX,
+		.step = 1,
+		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	},
+	
 	//custom v4l2-ctrls
 	{
 		.ops = &mvcam_ctrl_ops,
@@ -479,25 +582,16 @@ static struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.flags = 0,
 	},
 };
+
+
 //grab some ctrls while streaming
 static void mvcam_v4l2_ctrl_grab(struct mvcam *mvcam,bool grabbed)
 {
-    int i = 0;
-    for (i = 0; i < ARRAY_SIZE(mvcam_v4l2_ctrls); ++i) {
-		switch(mvcam->ctrls[i]->id)
-        {
-            case V4L2_CID_VEYE_MV_TRIGGER_MODE:
-            case V4L2_CID_VEYE_MV_TRIGGER_SRC:
-            case V4L2_CID_VEYE_MV_FRAME_RATE:
-            case V4L2_CID_VEYE_MV_ROI_X:
-            case V4L2_CID_VEYE_MV_ROI_Y:
-                v4l2_ctrl_grab(mvcam->ctrls[i], grabbed);
-            break;
-
-            default:
-            break;
-        }
-	}
+	v4l2_ctrl_grab(mvcam->ctrls[CID_VEYE_MV_TRIGGER_MODE], grabbed);
+	v4l2_ctrl_grab(mvcam->ctrls[CID_VEYE_MV_TRIGGER_SRC], grabbed);
+	v4l2_ctrl_grab(mvcam->ctrls[CID_VEYE_MV_FRAME_RATE], grabbed);
+	v4l2_ctrl_grab(mvcam->ctrls[CID_VEYE_MV_ROI_X], grabbed);
+	v4l2_ctrl_grab(mvcam->ctrls[CID_VEYE_MV_ROI_Y], grabbed);
 }
 
 static void mvcam_v4l2_ctrl_init(struct mvcam *mvcam)
@@ -536,6 +630,27 @@ static void mvcam_v4l2_ctrl_init(struct mvcam *mvcam)
                 //mvcam_v4l2_ctrls[i].def = value;
                 mvcam_v4l2_ctrls[i].max = mvcam->max_height - mvcam->min_height;
             break;
+			case V4L2_CID_HBLANK:
+				mvcam_v4l2_ctrls[i].max = mvcam->hblank;
+				mvcam_v4l2_ctrls[i].def = mvcam->hblank;
+				mvcam_v4l2_ctrls[i].min = mvcam->hblank;
+			break;
+			case V4L2_CID_VBLANK:
+				mvcam_v4l2_ctrls[i].max = MV_CAM_V_BLANK_MAX;
+				mvcam->vblank_lines = MV_CAM_V_BLANK_DEFAULT;
+			break;
+			case V4L2_CID_EXPOSURE:
+				mvcam->exp_val = MV_CAM_EXPOSURE_DEF;
+			break;
+			case V4L2_CID_ANALOGUE_GAIN:
+				mvcam->again_val = MV_CAM_AGAIN_DEF;
+			break;
+			case V4L2_CID_PIXEL_RATE:
+				if(mvcam->pixelrate != 0){
+					mvcam_v4l2_ctrls[i].min = mvcam->pixelrate;
+					mvcam_v4l2_ctrls[i].def = mvcam->pixelrate;
+					mvcam_v4l2_ctrls[i].max = mvcam->pixelrate;
+				}
             default:
             break;
         }
@@ -617,17 +732,18 @@ static int mvcam_csi2_get_fmt(struct v4l2_subdev *sd,
 {
 	struct mvcam *mvcam = to_mvcam(sd);
 	struct mvcam_format *current_format;
-	
+	struct v4l2_mbus_framefmt *fmt = &format->format;
+
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
 
 	mutex_lock(&mvcam->mutex);
-    /*if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
+    if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
             struct v4l2_mbus_framefmt *try_fmt =
-                v4l2_subdev_get_try_format(&mvcam->sd, cfg, format->pad);
+                v4l2_subdev_get_try_format(&mvcam->sd, sd_state, format->pad);
             try_fmt->code = format->pad == IMAGE_PAD ? current_format->mbus_code : MEDIA_BUS_FMT_SENSOR_DATA;
             format->format = *try_fmt;
-        } else {*/
+        } else {
     	if (format->pad == IMAGE_PAD) {
     		current_format = &mvcam->supported_formats[mvcam->current_format_idx];
     		format->format.width = mvcam->roi.width;
@@ -635,21 +751,20 @@ static int mvcam_csi2_get_fmt(struct v4l2_subdev *sd,
             
     		format->format.code = current_format->mbus_code;
     		format->format.field = V4L2_FIELD_NONE;
-            //for uyvy gstreamer 
-    		format->format.colorspace = V4L2_COLORSPACE_REC709;//V4L2_COLORSPACE_REC709;
-/*            format->format.ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(format->format.colorspace);
-        	format->format.quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
-        							  format->format.colorspace,
-        							  format->format.ycbcr_enc);
-        	format->format.xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(format->format.colorspace);
-*/            
-    		v4l2_dbg(1, debug, sd, "%s: width: (%d) height: (%d) code: (0x%X)\n",
-    			__func__, format->format.width,format->format.height,
-    				format->format.code);
+			fmt->colorspace = V4L2_COLORSPACE_RAW;
+			fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
+			fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
+									fmt->colorspace,
+									fmt->ycbcr_enc);
+			fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
+
+			v4l2_dbg(1, debug, sd, "%s: width: (%d) height: (%d) code: (0x%X)\n",
+				__func__, format->format.width, format->format.height,
+				format->format.code);
     	} else {
     		mvcam_update_metadata_pad_format(format);
     	}
-    //}
+    }
 
 	mutex_unlock(&mvcam->mutex);
 	return 0;
@@ -667,6 +782,20 @@ static int mvcam_csi2_get_fmt_idx_by_code(struct mvcam *mvcam,
 	return -EINVAL;
 }
 
+static const struct v4l2_rect *
+__mvcam_get_pad_crop(struct mvcam *mvcam,
+		      struct v4l2_subdev_state *sd_state,
+		      unsigned int pad, enum v4l2_subdev_format_whence which)
+{
+	switch (which) {
+	case V4L2_SUBDEV_FORMAT_TRY:
+		return v4l2_subdev_get_try_crop(&mvcam->sd, sd_state, pad);
+	case V4L2_SUBDEV_FORMAT_ACTIVE:
+		return &mvcam->roi;
+	}
+
+	return NULL;
+}
 static int mvcam_get_selection(struct v4l2_subdev *sd,
 				struct v4l2_subdev_state *sd_state,
 				struct v4l2_subdev_selection *sel)
@@ -675,9 +804,10 @@ static int mvcam_get_selection(struct v4l2_subdev *sd,
 
 	switch (sel->target) {
 	case V4L2_SEL_TGT_CROP: {
-    		//sel->r = *__mvcam_get_pad_crop(mvcam, cfg, sel->pad,
-    		//				sel->which);
-            sel->r = mvcam->roi;
+			mutex_lock(&mvcam->mutex);
+    		sel->r = *__mvcam_get_pad_crop(mvcam, sd_state, sel->pad,
+    						sel->which);
+			mutex_unlock(&mvcam->mutex);
     		break;
     	}
         case V4L2_SEL_TGT_NATIVE_SIZE:
@@ -737,6 +867,7 @@ static int mvcam_csi2_try_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_format *format)
 {
 	struct mvcam *mvcam = to_mvcam(sd);
+	struct v4l2_mbus_framefmt *framefmt;
 	int ret = 0;
 
 	ret = mvcam_frm_supported(
@@ -749,6 +880,8 @@ static int mvcam_csi2_try_fmt(struct v4l2_subdev *sd,
 		return ret;
 	}
 
+	framefmt = v4l2_subdev_get_try_format(sd, sd_state, format->pad);
+	*framefmt = format->format;
 	return 0;
 }
 
@@ -774,7 +907,7 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
             return -EINVAL;
     	}*/
     
-		format->format.colorspace =  V4L2_COLORSPACE_REC709;
+		format->format.colorspace =  V4L2_COLORSPACE_RAW;
 		format->format.field = V4L2_FIELD_NONE;
 
 		v4l2_dbg(1, debug, sd, "%s: code: 0x%X",
@@ -790,7 +923,7 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
     			return -EINVAL;
             mvcam->current_format_idx = i;
             mvcam_write(mvcam->client,Pixel_Format,mvcam->supported_formats[i].data_type);
-
+			msleep(100);
 	        mvcam->roi.width = format->format.width;
 	        mvcam->roi.height = format->format.height;
             sel.target = V4L2_SEL_TGT_CROP;
@@ -812,9 +945,6 @@ static int mvcam_csi2_set_fmt(struct v4l2_subdev *sd,
 	}
 	return 0;
 }
-
-
-
 
 static void mvcam_free_controls(struct mvcam *mvcam)
 {
@@ -869,6 +999,10 @@ VEYE_TRACE
     ret = mvcam_read(client, Format_cap, &fmtcap);
     if (ret < 0)
 		goto err;
+	//temp by xumm,delete raw 12 support for imx462m now, just for libcamera 
+	fmtcap &= ~(1<<MV_DT_Mono12);
+	fmtcap &= ~(1<<MV_DT_UYVY);
+	//end
 	num_pixformat = bit_count(fmtcap);
 	if (num_pixformat < 0)
 		goto err;
@@ -986,7 +1120,7 @@ static int mvcam_set_stream(struct v4l2_subdev *sd, int enable)
 	enable = !!enable;
 	
 	if (mvcam->streaming == enable) {
-        dev_info(&client->dev, "%s already streamed!\n", __func__);
+        dev_info(&client->dev, "%s streaming state not changed %d!\n", __func__,enable);
 		return 0;
 	}
 VEYE_TRACE
@@ -1051,7 +1185,6 @@ static int mvcam_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 //	struct v4l2_mbus_framefmt *try_fmt_meta =
 //		v4l2_subdev_get_try_format(sd, fh->pad, METADATA_PAD);
     struct v4l2_rect *try_crop;
-    mutex_lock(&mvcam->mutex);
 	/* Initialize try_fmt */
 	try_fmt->width = mvcam->max_width;
 	try_fmt->height = mvcam->max_height;
@@ -1071,15 +1204,16 @@ static int mvcam_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_crop->width = mvcam->max_width;
 	try_crop->height = mvcam->max_height;
     
-    mutex_unlock(&mvcam->mutex);
-    
 	return 0;
 }
 static const struct v4l2_subdev_internal_ops mvcam_internal_ops = {
 	.open = mvcam_open,
 };
+
 static const struct v4l2_subdev_core_ops mvcam_core_ops = {
 	// .s_power = mvcam_s_power,
+	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
 
 static const struct v4l2_subdev_video_ops mvcam_video_ops = {
@@ -1091,8 +1225,10 @@ static const struct v4l2_subdev_pad_ops mvcam_pad_ops = {
 	.get_fmt = mvcam_csi2_get_fmt,
 	.set_fmt = mvcam_csi2_set_fmt,
     .get_selection = mvcam_get_selection,
-	.set_selection = mvcam_set_selection,
+	//.set_selection = mvcam_set_selection,//delete it for temp testing
 	.enum_frame_size = mvcam_csi2_enum_framesizes,
+	//todo
+	//.get_mbus_config =  //will add lane number setting here
 };
 
 static const struct v4l2_subdev_ops mvcam_subdev_ops = {
@@ -1108,8 +1244,10 @@ static int __maybe_unused mvcam_suspend(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mvcam *mvcam = to_mvcam(sd);
 
-	if (mvcam->streaming)
+	if (mvcam->streaming){
 		mvcam_stop_streaming(mvcam);
+		mvcam->streaming = 0;
+	}
 
 	return 0;
 }
@@ -1125,6 +1263,7 @@ static int __maybe_unused mvcam_resume(struct device *dev)
 		ret = mvcam_start_streaming(mvcam);
 		if (ret)
 			goto error;
+		mvcam->streaming = 1;
 	}
 
 	return 0;
@@ -1161,9 +1300,6 @@ VEYE_TRACE
 			continue;
 		}
 		mvcam->ctrls[i] = ctrl;
-        if(mvcam->ctrls[i]->id == V4L2_CID_VEYE_MV_FRAME_RATE){
-            mvcam->frmrate = mvcam->ctrls[i];
-        }
         dev_dbg(&client->dev, "init control %s success\n",mvcam_v4l2_ctrls[i].name);
 	}
     
@@ -1209,7 +1345,6 @@ static int mvcam_get_regulators(struct mvcam *mvcam)
 				       MVCAM_NUM_SUPPLIES,
 				       mvcam->supplies);
 }
-
 
 /* Verify chip ID */
 static int mvcam_identify_module(struct mvcam * mvcam)
@@ -1380,6 +1515,74 @@ static const struct kobj_type mvcam_ktype = {
     .default_groups = mvcam_attr_groups,
 };
 
+static void mvcam_param_init(struct mvcam *mvcam)
+{
+	mvcam->hmax = 0;
+	mvcam->hblank = MV_CAM_H_BLANK_DEFAULT;
+	mvcam->pixelrate = MV_CAM_PIXEL_RATE;
+    if(mvcam->model_id == MV_MIPI_IMX178M){
+        mvcam->min_width = MV_IMX178M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX178M_ROI_H_MIN;
+		mvcam->hmax = IMX178M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX178M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == MV_MIPI_SC130M){
+        mvcam->min_width = MV_SC130M_ROI_W_MIN;
+        mvcam->min_height = MV_SC130M_ROI_H_MIN;
+		mvcam->hmax = SC130M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = SC130M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == MV_MIPI_IMX296M){
+        mvcam->min_width = MV_IMX296M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX296M_ROI_H_MIN;
+		mvcam->hmax = IMX296M_HMAX_DEFAULT_10BIT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX296M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == MV_MIPI_IMX265M){
+        mvcam->min_width = MV_IMX265M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX265M_ROI_H_MIN;
+		mvcam->hmax = IMX265M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX265M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == MV_MIPI_IMX264M){
+        mvcam->min_width = MV_IMX264M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX264M_ROI_H_MIN;
+		mvcam->hmax = IMX264M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX264M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == RAW_MIPI_SC132M){
+        mvcam->min_width = RAW_SC132M_ROI_W_MIN;
+        mvcam->min_height = RAW_SC132M_ROI_H_MIN;
+		mvcam->hmax = SC132M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = SC132M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == MV_MIPI_IMX287M){
+        mvcam->min_width = MV_IMX287M_ROI_W_MIN;
+        mvcam->min_height = MV_IMX287M_ROI_H_MIN;
+		mvcam->hmax = IMX287M_HMAX_DEFAULT_10BIT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX287M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == RAW_MIPI_IMX462M){
+        mvcam->min_width = RAW_IMX462M_ROI_W_MIN;
+        mvcam->min_height = RAW_IMX462M_ROI_H_MIN;
+		mvcam->hmax = IMX462M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = IMX462M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == RAW_MIPI_AR0234M){
+        mvcam->min_width = RAW_AR0234M_ROI_W_MIN;
+        mvcam->min_height = RAW_AR0234M_ROI_H_MIN;
+		mvcam->hmax = AR0234M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = AR0234M_PIXEL_RATE_DEFAULT;
+    }else if(mvcam->model_id == RAW_MIPI_SC535M){
+        mvcam->min_width = RAW_SC535M_ROI_W_MIN;
+        mvcam->min_height = RAW_SC535M_ROI_H_MIN;
+		mvcam->hmax = SC535M_HMAX_DEFAULT;
+		mvcam->hblank = mvcam->hmax - mvcam->roi.width;
+		mvcam->pixelrate = SC535M_PIXEL_RATE_DEFAULT;
+    }
+}
+
 static int mvcam_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -1435,46 +1638,18 @@ static int mvcam_probe(struct i2c_client *client)
     mvcam_get_mipifeature(mvcam);
     /* Check the hardware configuration in device tree */
     if(mvcam_check_hwcfg(dev))
-		goto error_power_off;
+		goto error_power_off; 
     
     mvcam_read(client, Sensor_Width, &mvcam->max_width);
     mvcam_read(client, Sensor_Height, &mvcam->max_height);
-    if(mvcam->model_id == MV_MIPI_IMX178M){
-        mvcam->min_width = MV_IMX178M_ROI_W_MIN;
-        mvcam->min_height = MV_IMX178M_ROI_H_MIN;
-    }else if(mvcam->model_id == MV_MIPI_SC130M){
-        mvcam->min_width = MV_SC130M_ROI_W_MIN;
-        mvcam->min_height = MV_SC130M_ROI_H_MIN;
-    }else if(mvcam->model_id == MV_MIPI_IMX296M){
-        mvcam->min_width = MV_IMX296M_ROI_W_MIN;
-        mvcam->min_height = MV_IMX296M_ROI_H_MIN;
-    }else if(mvcam->model_id == MV_MIPI_IMX265M){
-        mvcam->min_width = MV_IMX265M_ROI_W_MIN;
-        mvcam->min_height = MV_IMX265M_ROI_H_MIN;
-    }else if(mvcam->model_id == MV_MIPI_IMX264M){
-        mvcam->min_width = MV_IMX264M_ROI_W_MIN;
-        mvcam->min_height = MV_IMX264M_ROI_H_MIN;
-    }else if(mvcam->model_id == RAW_MIPI_SC132M){
-        mvcam->min_width = RAW_SC132M_ROI_W_MIN;
-        mvcam->min_height = RAW_SC132M_ROI_H_MIN;
-    }else if(mvcam->model_id == MV_MIPI_IMX287M){
-        mvcam->min_width = MV_IMX287M_ROI_W_MIN;
-        mvcam->min_height = MV_IMX287M_ROI_H_MIN;
-    }else if(mvcam->model_id == RAW_MIPI_IMX462M){
-        mvcam->min_width = RAW_IMX462M_ROI_W_MIN;
-        mvcam->min_height = RAW_IMX462M_ROI_H_MIN;
-    }else if(mvcam->model_id == RAW_MIPI_AR0234M){
-        mvcam->min_width = RAW_AR0234M_ROI_W_MIN;
-        mvcam->min_height = RAW_AR0234M_ROI_H_MIN;
-    }else if(mvcam->model_id == RAW_MIPI_SC535M){
-        mvcam->min_width = RAW_SC535M_ROI_W_MIN;
-        mvcam->min_height = RAW_SC535M_ROI_H_MIN;
-    }
+
     v4l2_dbg(1, debug, mvcam->client, "%s: max width %d; max height %d\n",
 					__func__, mvcam->max_width,mvcam->max_height);
     //read roi
     mvcam_getroi(mvcam);
-    
+	
+	mvcam_param_init(mvcam);
+
     mvcam_v4l2_ctrl_init(mvcam);
 	if (mvcam_enum_controls(mvcam)) {
 		dev_err(dev, "enum controls failed.\n");
