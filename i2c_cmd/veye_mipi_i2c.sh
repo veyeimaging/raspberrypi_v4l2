@@ -1701,3 +1701,5 @@ if [ ${MODE} = "write" ] ; then
 	esac
     sleep 0.1;
 fi
+#disable i2c transfer
+./i2c_write $I2C_DEV $I2C_ADDR  0x07 0xFF>/dev/null 2>&1
