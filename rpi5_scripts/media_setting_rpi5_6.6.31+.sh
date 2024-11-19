@@ -28,9 +28,10 @@ g_width=0
 g_height=0
 g_media_fmt=null
 g_pixel_fmt=null
+cam=2 #all cams
 
 print_usage() {
-    echo "Usage: $0 veyecam2m/csimx307/cssc132/mvcam -fmt [UYVY/RAW8/RAW10/RAW12] -w [width] -h [height]"
+    echo "Usage: $0 veyecam2m/csimx307/cssc132/mvcam -fmt [UYVY/RAW8/RAW10/RAW12] -w [width] -h [height] -c [cam 0|1]"
     echo -e "This shell script is designed to detect the connection of a camera on Raspberry Pi 5. \n
     It utilizes media-ctl and v4l2-ctl commands to configure the linking relationships and data formats of the media pad. \n
     Once completed, you can directly use /dev/video0 or /dev/video8 to obtain image data.\n"
@@ -118,6 +119,10 @@ parse_arguments() {
         shift
         g_height="$1"
         ;;
+      -c)
+	shift
+	cam=$1
+	;;
       *)
         echo "Unknown option: $1"
 		print_usage
@@ -185,28 +190,32 @@ fi
 
 parse_arguments "$@"
 
-probe_camera_entity $g_camera_name $I2CBUS_CAM1
+if [ $cam -gt 0 ]; then
+	probe_camera_entity $g_camera_name $I2CBUS_CAM1
 
-if [ $? -eq 1 ]; then
-	echo "CAM1 probed: media device is $g_media_device"
-	g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
-	g_video_subdevice=$(media-ctl -e "$g_camera_name $I2CBUS_CAM1-003b" -d $g_media_device)	
-	set_camera_entity $g_camera_name $I2CBUS_CAM1
-	echo "set CAM1 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
-else 
-	echo "$g_camera_name $I2CBUS_CAM1 NOT FOUND"
+	if [ $? -eq 1 ]; then
+		echo "CAM1 probed: media device is $g_media_device"
+		g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
+		g_video_subdevice=$(media-ctl -e "$g_camera_name $I2CBUS_CAM1-003b" -d $g_media_device)	
+		set_camera_entity $g_camera_name $I2CBUS_CAM1
+		echo "set CAM1 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+	else 
+		echo "$g_camera_name $I2CBUS_CAM1 NOT FOUND"
+	fi
 fi
 
-probe_camera_entity $g_camera_name $I2CBUS_CAM0
+if [ $cam -ne 1 ]; then
+	probe_camera_entity $g_camera_name $I2CBUS_CAM0
 
-if [ $? -eq 1 ]; then
-	echo "CAM0 probed:  media device is  $g_media_device"
-	g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
-	g_video_subdevice=$(media-ctl -e "$g_camera_name $I2CBUS_CAM0-003b" -d $g_media_device)
-	set_camera_entity $g_camera_name $I2CBUS_CAM0
-	echo "set CAM0 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
-else 
-	echo "$g_camera_name $I2CBUS_CAM0 NOT FOUND"
+	if [ $? -eq 1 ]; then
+		echo "CAM0 probed:  media device is  $g_media_device"
+		g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
+		g_video_subdevice=$(media-ctl -e "$g_camera_name $I2CBUS_CAM0-003b" -d $g_media_device)
+		set_camera_entity $g_camera_name $I2CBUS_CAM0
+		echo "set CAM0 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+	else 
+		echo "$g_camera_name $I2CBUS_CAM0 NOT FOUND"
+	fi
 fi
 
 exit 0
