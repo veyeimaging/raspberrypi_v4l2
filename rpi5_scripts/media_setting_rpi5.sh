@@ -211,6 +211,8 @@ set_camera_entity()
 	media-ctl -d $g_media_device -r
 	#enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
 	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]'
+    v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
+    v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
 	#set media's setting
 	media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-003b':0[fmt:${g_media_fmt}/${g_width}x${g_height} field:none]"
 	#media-ctl -d $g_media_device -V ''\''csi2'\'':0 [fmt:UYVY8_1X16/1920x1080 field:none]'
@@ -218,8 +220,6 @@ set_camera_entity()
 	#media-ctl -d $g_media_device -V ''\''csi2'\'':4 [fmt:UYVY8_1X16/1920x1080 field:none]'
 	media-ctl -d "$g_media_device" -V "'csi2':4 [fmt:${g_media_fmt}/${g_width}x${g_height} field:none]"
 	#set video node
-    v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
-    v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
 	v4l2-ctl -d $g_video_device --set-fmt-video=width=$g_width,height=$g_height,pixelformat=$g_pixel_fmt,colorspace=rec709,ycbcr=rec709,xfer=rec709,quantization=lim-range
 }
 ### here really begain!
