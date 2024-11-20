@@ -1394,7 +1394,7 @@ err_destroy_mutex:
 	return ret;
 }
 
-static void mvcam_remove(struct i2c_client *client)
+static int mvcam_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mvcam *mvcam = to_mvcam(sd);
@@ -1404,6 +1404,7 @@ static void mvcam_remove(struct i2c_client *client)
 	mvcam_free_controls(mvcam);
 
 	mutex_destroy(&mvcam->mutex);
+    return 0;
 }
 
 static const struct of_device_id veyemv_cam_dt_ids[] = {
