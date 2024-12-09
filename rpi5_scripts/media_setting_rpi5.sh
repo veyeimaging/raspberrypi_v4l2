@@ -157,12 +157,20 @@ check_rpi_board()
 {
 	model=$(tr -d '\0' </proc/device-tree/model)
 
-	if [[ $model == *"Raspberry Pi 5"* ]]; then
-		echo "This is a Raspberry Pi 5."
-	else
-		echo "This is not a Raspberry Pi 5. Will exit."
-		exit 0;
-	fi
+    if [[ $model == *"Raspberry Pi 5"* ]]; then
+        echo "This is a Raspberry Pi 5."
+        echo "Please use i2c-4 for cam1, i2c-6 for cam0"
+        I2CBUS_CAM1=4
+        I2CBUS_CAM0=6
+    elif [[ $model == *"Raspberry Pi Compute Module 5"* ]]; then
+        echo "This is a Raspberry Pi Compute Module 5."
+        echo "Please use i2c-0 for cam1, i2c-6 for cam0"
+        I2CBUS_CAM1=0
+        I2CBUS_CAM0=6
+    else
+        echo "This is not a Raspberry Pi 5."
+        exit 0
+    fi
 }
 
 #check if the kernel version is greater than 6.6.31
@@ -211,8 +219,10 @@ set_camera_entity()
 	media-ctl -d $g_media_device -r
 	#enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
 	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]'
-    v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
-    v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
+    if [ "$g_camera_type" = "MV_type" ]; then
+        v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
+        v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
+    fi
 	#set media's setting
 	media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-003b':0[fmt:${g_media_fmt}/${g_width}x${g_height} field:none]"
 	#media-ctl -d $g_media_device -V ''\''csi2'\'':0 [fmt:UYVY8_1X16/1920x1080 field:none]'
