@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #
-I2CBUS_CAM1=4
-I2CBUS_CAM0=6
+I2CBUS_CAM1=11
+I2CBUS_CAM0=10
 
 #default params of YUV_type cameras
 WIDTH_YUV=1920
@@ -157,20 +157,12 @@ check_rpi_board()
 {
 	model=$(tr -d '\0' </proc/device-tree/model)
 
-    if [[ $model == *"Raspberry Pi 5"* ]]; then
-        echo "This is a Raspberry Pi 5."
-        echo "Please use i2c-4 for cam1, i2c-6 for cam0"
-        I2CBUS_CAM1=4
-        I2CBUS_CAM0=6
-    elif [[ $model == *"Raspberry Pi Compute Module 5"* ]]; then
-        echo "This is a Raspberry Pi Compute Module 5."
-        echo "Please use i2c-0 for cam1, i2c-6 for cam0"
-        I2CBUS_CAM1=0
-        I2CBUS_CAM0=6
-    else
-        echo "This is not a Raspberry Pi 5."
-        exit 0
-    fi
+	if [[ $model == *"Raspberry Pi 5"* ]]; then
+		echo "This is a Raspberry Pi 5."
+	else
+		echo "This is not a Raspberry Pi 5. Will exit."
+		exit 0;
+	fi
 }
 
 #check if the kernel version is greater than 6.6.31
@@ -195,6 +187,28 @@ check_kernel_version()
     fi
 }
 
+check_i2c_bus() {
+
+    kernel_version=$(uname -r | awk -F '+' '{print $1}') 
+
+    ref_version="6.6.62"
+
+    IFS='.' read -r k_major k_minor k_patch <<<"$kernel_version"
+    IFS='.' read -r r_major r_minor r_patch <<<"$ref_version"
+   # echo "ref version: $k_major $k_minor $k_patch"
+   # echo "read version: $r_major $r_minor $r_patch"
+    if ((k_major > r_major)) || \
+       ((k_major == r_major && k_minor > r_minor)) || \
+       ((k_major == r_major && k_minor == r_minor && k_patch >= r_patch)); then
+        echo "Kernel version is $kernel_version, use i2c-10 and i2c-11."
+        I2CBUS_CAM1=11
+        I2CBUS_CAM0=10
+    else
+        echo "Kernel version is $kernel_version, use i2c-6 and i2c-4."
+        I2CBUS_CAM1=4
+        I2CBUS_CAM0=6
+    fi
+}
 
 probe_camera_entity() 
 {
@@ -219,10 +233,8 @@ set_camera_entity()
 	media-ctl -d $g_media_device -r
 	#enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
 	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]'
-    if [ "$g_camera_type" = "MV_type" ]; then
-        v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
-        v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
-    fi
+    v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
+    v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
 	#set media's setting
 	media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-003b':0[fmt:${g_media_fmt}/${g_width}x${g_height} field:none]"
 	#media-ctl -d $g_media_device -V ''\''csi2'\'':0 [fmt:UYVY8_1X16/1920x1080 field:none]'
@@ -236,6 +248,7 @@ set_camera_entity()
 
 check_rpi_board;
 check_kernel_version;
+check_i2c_bus;
 
 if [ "$#" -lt 1 ]; then
     print_usage
@@ -243,7 +256,6 @@ if [ "$#" -lt 1 ]; then
 fi
 
 parse_arguments "$@"
-
 
 if [ $cam -gt 0 ]; then
 	probe_camera_entity $g_camera_name $I2CBUS_CAM1

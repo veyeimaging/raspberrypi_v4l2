@@ -1,30 +1,13 @@
 #!/bin/bash
 
 #set -x
+
+I2CBUS_CAM1=11
+I2CBUS_CAM0=10
+
+
 media_device="/dev/media0"
 # 寻找包含 "veyecam2m 4-003b" entity 的设备节点
-I2CBUS_CAM1=4
-I2CBUS_CAM0=6
-
-check_rpi_board()
-{
-	model=$(tr -d '\0' </proc/device-tree/model)
-
-    if [[ $model == *"Raspberry Pi 5"* ]]; then
-        echo "This is a Raspberry Pi 5."
-        echo "Please use i2c-4 for cam1, i2c-6 for cam0"
-        I2CBUS_CAM1=4
-        I2CBUS_CAM0=6
-    elif [[ $model == *"Raspberry Pi Compute Module 5"* ]]; then
-        echo "This is a Raspberry Pi Compute Module 5."
-        echo "Please use i2c-0 for cam1, i2c-6 for cam0"
-        I2CBUS_CAM1=0
-        I2CBUS_CAM0=6
-    else
-        echo "This is not a Raspberry Pi 5."
-        exit 0
-    fi
-}
 
 find_entity_device() {
     local entity_name="$1"
@@ -42,7 +25,30 @@ find_entity_device() {
     done
 }
 
-check_rpi_board
+check_i2c_bus() {
+
+    kernel_version=$(uname -r | awk -F '+' '{print $1}') 
+
+    ref_version="6.6.62"
+
+    IFS='.' read -r k_major k_minor k_patch <<<"$kernel_version"
+    IFS='.' read -r r_major r_minor r_patch <<<"$ref_version"
+   # echo "ref version: $k_major $k_minor $k_patch"
+   # echo "read version: $r_major $r_minor $r_patch"
+    if ((k_major > r_major)) || \
+       ((k_major == r_major && k_minor > r_minor)) || \
+       ((k_major == r_major && k_minor == r_minor && k_patch >= r_patch)); then
+        echo "Kernel version is $kernel_version, use i2c-10 and i2c-11."
+        I2CBUS_CAM1=11
+        I2CBUS_CAM0=10
+    else
+        echo "Kernel version is $kernel_version, use i2c-6 and i2c-4."
+        I2CBUS_CAM1=4
+        I2CBUS_CAM0=6
+    fi
+}
+
+check_i2c_bus
 
 find_entity_device "veyecam2m" $I2CBUS_CAM0
 find_entity_device "veyecam2m" $I2CBUS_CAM1
