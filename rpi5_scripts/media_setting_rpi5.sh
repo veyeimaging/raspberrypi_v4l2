@@ -31,6 +31,7 @@ g_media_fmt=null
 g_pixel_fmt=null
 cam=2 #all cams
 g_unpacked_supported=0
+g_cm5=0
 
 print_usage() {
     echo "Usage: $0 veyecam2m/csimx307/cssc132/mvcam -fmt [UYVY/RAW8/RAW10/RAW12] -x [roi_x] -y [roi_y] -w [width] -h [height] -c [cam 0|1]"
@@ -159,6 +160,10 @@ check_rpi_board()
 
 	if [[ $model == *"Raspberry Pi 5"* ]]; then
 		echo "This is a Raspberry Pi 5."
+        g_cm5=0
+    elif [[ $model == *"Raspberry Pi Compute Module 5"* ]]; then
+        echo "This is a Raspberry Pi Compute Module 5."
+        g_cm5=1
 	else
 		echo "This is not a Raspberry Pi 5. Will exit."
 		exit 0;
@@ -200,14 +205,22 @@ check_i2c_bus() {
     if ((k_major > r_major)) || \
        ((k_major == r_major && k_minor > r_minor)) || \
        ((k_major == r_major && k_minor == r_minor && k_patch >= r_patch)); then
-        echo "Kernel version is $kernel_version, use i2c-10 and i2c-11."
-        I2CBUS_CAM1=11
+        if ((g_cm5 == 1));then
+            I2CBUS_CAM1=0
+        else
+            I2CBUS_CAM1=11
+        fi
         I2CBUS_CAM0=10
+        
     else
-        echo "Kernel version is $kernel_version, use i2c-6 and i2c-4."
-        I2CBUS_CAM1=4
-        I2CBUS_CAM0=6
+        if ((g_cm5 == 1));then
+            I2CBUS_CAM1=0
+        else
+            I2CBUS_CAM1=4
+        fi
+        I2CBUS_CAM1=6
     fi
+    echo "Kernel version is $kernel_version, use i2c-$I2CBUS_CAM0 for CAM0 and i2c-$I2CBUS_CAM1 for CAM1."
 }
 
 probe_camera_entity() 

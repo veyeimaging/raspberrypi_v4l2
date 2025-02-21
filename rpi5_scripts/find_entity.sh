@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #set -x
+g_cm5=0
 
 I2CBUS_CAM1=11
 I2CBUS_CAM0=10
@@ -24,6 +25,21 @@ find_entity_device() {
         fi
     done
 }
+check_rpi_board()
+{
+	model=$(tr -d '\0' </proc/device-tree/model)
+
+	if [[ $model == *"Raspberry Pi 5"* ]]; then
+		echo "This is a Raspberry Pi 5."
+        g_cm5=0
+    elif [[ $model == *"Raspberry Pi Compute Module 5"* ]]; then
+        echo "This is a Raspberry Pi Compute Module 5."
+        g_cm5=1
+	else
+		echo "This is not a Raspberry Pi 5. Will exit."
+		exit 0;
+	fi
+}
 
 check_i2c_bus() {
 
@@ -38,17 +54,26 @@ check_i2c_bus() {
     if ((k_major > r_major)) || \
        ((k_major == r_major && k_minor > r_minor)) || \
        ((k_major == r_major && k_minor == r_minor && k_patch >= r_patch)); then
-        echo "Kernel version is $kernel_version, use i2c-10 and i2c-11."
-        I2CBUS_CAM1=11
+        if ((g_cm5 == 1));then
+            I2CBUS_CAM1=0
+        else
+            I2CBUS_CAM1=11
+        fi
         I2CBUS_CAM0=10
+        
     else
-        echo "Kernel version is $kernel_version, use i2c-6 and i2c-4."
-        I2CBUS_CAM1=4
-        I2CBUS_CAM0=6
+        if ((g_cm5 == 1));then
+            I2CBUS_CAM1=0
+        else
+            I2CBUS_CAM1=4
+        fi
+        I2CBUS_CAM1=6
     fi
+    echo "Kernel version is $kernel_version, use i2c-$I2CBUS_CAM0 for CAM0 and i2c-$I2CBUS_CAM1 for CAM1."
 }
 
-check_i2c_bus
+check_rpi_board;
+check_i2c_bus;
 
 find_entity_device "veyecam2m" $I2CBUS_CAM0
 find_entity_device "veyecam2m" $I2CBUS_CAM1
