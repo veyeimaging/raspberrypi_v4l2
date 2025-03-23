@@ -22,7 +22,7 @@ for i2c_device in /sys/bus/i2c/devices/i2c-*; do
                     echo "Found veye_mvcam camera on $i2c_bus."
                     # Read and set the contents of the files as environment variables
                     #echo "Reading files in $sub_device/veye_mvcam:"
-                    for file in camera_model fps height width; do
+                    for file in camera_model fps width height; do
                         file_path="$sub_device/veye_mvcam/$file"
                         if [ -f "$file_path" ]; then
                             value=$(cat "$file_path")
@@ -35,13 +35,13 @@ for i2c_device in /sys/bus/i2c/devices/i2c-*; do
                                     export FPS="$value" 
                                     echo "Setenv FPS = $value"
                                     ;;
-                                height) 
-                                    export HEIGHT="$value" 
-                                    echo "Setenv HEIGHT = $value"
-                                    ;;
                                 width) 
                                     export WIDTH="$value" 
                                     echo "Setenv WIDTH = $value"
+                                    ;;
+                                height) 
+                                    export HEIGHT="$value" 
+                                    echo "Setenv HEIGHT = $value"
                                     ;;
                             esac
                         else
