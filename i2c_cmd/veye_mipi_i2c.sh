@@ -19,8 +19,8 @@ print_usage()
 	echo "    -p2 [param1] 			   param2 of each function"
 	echo "    -b [i2c bus num] 		   i2c bus number"
 	echo "    -d [i2c addr] 		   i2c addr if not default 0x3b"
-	echo "support functions: devid,hdver,sensorid,wdrmode,videoformat,mirrormode,denoise,agc,lowlight,daynightmode,ircutdir,irtrigger£¬mshutter,curshutter"
-    echo "cameramode, nodf, capture, csienable,saturation,wdrbtargetbr,wdrtargetbr, brightness ,contrast , sharppen,wdrsharppen aespeed,lsc,boardmodel,yuvseq,i2cauxenable,i2cwen,awbgain,wbmode,mwbgain,antiflicker,awb_boffset,blcstrength,blcpos,paramsave"
+	echo "support functions: devid,hdver,sensorid,wdrmode,videoformat,mirrormode,denoise,agc,lowlight,daynightmode,ircutdir,irtrigger,mshutter,"
+    echo "cameramode, nodf, capture, csienable,saturation,wdrbtargetbr,wdrtargetbr, brightness ,contrast , sharppen,wdrsharppen aespeed,lsc,boardmodel,yuvseq,i2cauxenable,i2cwen,awbgain,wbmode,mwbgain,antiflicker,awb_boffset,blcstrength,blcpos,exptime,paramsave"
     echo "new_expmode,new_mshutter,new_mgain"
 }
 
@@ -354,6 +354,30 @@ write_lowlight()
 {
 	local lowlight=0;
 	local res=0;
+	if [ $PARAM1 -eq 0 ] ; then
+		printf "close lowlight mode\n";
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x6D );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 0xA5);
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+		sleep 0.01;
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x66 );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 0x40);
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+	else
+		printf "open lowlight mode\n";
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x6D );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 0xA4);
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+		sleep 0.01;
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x66 );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 0x41 );
+		res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+	fi
+	sleep 0.01;
 	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA );
 	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x64 );
 	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 $PARAM1);
@@ -1433,6 +1457,75 @@ write_auto_shutter_max()
     printf "w max_shutter %d us\n" $max_shutter;
 }
 
+read_exptime()
+{
+    local regval=0;
+    local expreg_l=0;
+    local expreg_h=0;
+	local res=0;
+    res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA);
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x12);
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x01);
+    sleep 0.01;
+	res=$(./i2c_read $I2C_DEV $I2C_ADDR  0x14 );
+	expreg_h=$?;
+    sleep 0.01;
+    res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDA);
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x13);
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x01);
+    sleep 0.01;
+	res=$(./i2c_read $I2C_DEV $I2C_ADDR  0x14 );
+	expreg_l=$?;
+    #exptime=expreg*29.6us@30fps mode
+	regval=$((($expreg_h<<8)+$expreg_l));
+	exptime=`echo $regval 29.6 | awk '{printf "%d\n",$1*$2}'`
+	printf "r reg 0x%x, exptime is %d us\n" $regval $exptime;
+    
+}
+
+read_osd()
+{
+    local regval_0=0;
+    local regval_1=0;
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDF );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x58 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x01 );
+	sleep 0.01;
+	res=$(./i2c_read $I2C_DEV $I2C_ADDR  0x14 );
+    regval_0=$?;
+    sleep 0.01;
+    res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0x47 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x5A );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x01 );
+    sleep 0.01;
+	res=$(./i2c_read $I2C_DEV $I2C_ADDR  0x14 );
+    regval_1=$?;
+    printf "r close osd 0x%x, 0x%x\n" $regval_0 $regval_1;
+}
+
+write_osd()
+{
+ 	local regval_0=0;
+    local regval_1=0;
+	if [ $PARAM1 -eq 1 ] ; then
+		printf "w open osd\n";
+		regval_0=0xA9;
+		regval_1=0xB0;
+	else
+        printf "w close osd\n";
+		regval_0=0xA8;
+		regval_1=0x30;
+	fi
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0xDF );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x58 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 $regval_0 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+    sleep 0.01;
+    res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x10 0x47 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x11 0x5A );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x12 $regval_1 );
+	res=$(./i2c_write $I2C_DEV $I2C_ADDR  0x13 0x00 );
+}
 #######################Action# BEGIN##############################
 
 pinmux;
@@ -1566,6 +1659,12 @@ if [ ${MODE} = "read" ] ; then
         "auto_shutter_max")
             read_auto_shutter_max;
                 ;;
+        "exptime")
+            read_exptime;
+                ;;
+        "osd")
+            read_osd;
+                ;;
 	esac
 fi
 
@@ -1698,8 +1797,12 @@ if [ ${MODE} = "write" ] ; then
         "auto_shutter_max")
             write_auto_shutter_max;
                 ;;
+        "osd")
+            write_osd;
+                ;;
 	esac
     sleep 0.1;
 fi
+
 #disable i2c transfer
 ./i2c_write $I2C_DEV $I2C_ADDR  0x07 0xFF>/dev/null 2>&1
