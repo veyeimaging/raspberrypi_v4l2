@@ -218,7 +218,7 @@ check_i2c_bus() {
         else
             I2CBUS_CAM1=4
         fi
-        I2CBUS_CAM1=6
+        I2CBUS_CAM0=6
     fi
     echo "Kernel version is $kernel_version, use i2c-$I2CBUS_CAM0 for CAM0 and i2c-$I2CBUS_CAM1 for CAM1."
 }
