@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Definitions for VEYE IMAGING's V-by-ONE thca242a
+/dts-v1/;
+/plugin/;
+
+/{
+	compatible = "brcm,bcm2835";
+    fragment@0 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	fragment@1 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	i2c_fragment:fragment@2 {
+		target = <&i2c_csi_dsi>;
+            __overlay__ {
+                #address-cells = <1>;
+                #size-cells = <0>;
+                status = "okay";
+
+                veye_vbyone: vbyone@65 {
+                compatible = "veye,vbyone";
+                priority = <(-1)>;
+                reg = <0x65>;
+                status = "okay";
+                csi-lane-count = <2>;
+                coax-num = <1>;
+                cam-i2c-pt-setting = <0x13>;
+                camera-i2c-address=<0x3b>;
+                
+                trgin-gpio-mode = <1>;
+                out1-gpio-mode = <1>;
+                out2-gpio-mode = <1>;
+                
+                serializer {
+                    i2c-address=<0x34>;
+                    csi-lane-count = <2>;
+                    csi-lane-speed = <1500>;
+                };
+            };
+		};
+	};
+    __overrides__ {
+		cam0 = <&i2c_fragment>, "target:0=",<&i2c_csi_dsi0>;
+	};
+};

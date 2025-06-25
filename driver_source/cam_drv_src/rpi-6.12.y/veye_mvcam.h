@@ -1,0 +1,322 @@
+#ifndef _VEYE_MVCAM_H_
+#define _VEYE_MVCAM_H_
+//typedef unsigned long u32;
+#include <asm-generic/int-ll64.h>
+/* mv series registers begin */
+#define BaseCommon 0x0000
+#define ImageAcqu 0x0400
+#define ImageFeature 0x0800
+#define ImageSigProc 0x0c00
+#define IOCtrl 0x1000
+#define FPGACmd 0x1400
+#define FPGABlock 0x1800
+
+#define Manufacturer_Name 0x0000
+#define Model_Name 0x0004
+#define Sensor_Name 0x0008
+#define Product_Info 0x000C
+#define Device_Version 0x0010
+#define System_reset 0x0014
+#define Param_save_to_flash 0x0018
+#define System_reboot 0x001C
+#define Time_stamp 0x0020
+#define Error_code 0x0024
+#define Format_cap 0x0028
+#define LaneNum_Cap 0x0034
+#define CameraModel0 0x0038
+#define CameraModel1 0x003C
+#define CameraModel2 0x0040 
+#define CameraModel3 0x0044 
+#define CameraModel4 0x0048 
+#define CameraModel5 0x004C 
+#define CameraModel6 0x0050 
+#define CameraModel7 0x0054 
+
+#define Image_Acquisition 0x400
+#define Trigger_Mode 0x404
+#define Trigger_Source 0x408
+#define Trigger_Num 0x40C
+#define Trigger_Inerval 0x410
+#define Trigger_Software 0x414
+#define Trigger_Count 0x418
+#define I2C_Addr 0x41C
+#define I2C_Port_Sel 0x420
+#define Reserved2 0x424
+#define User_overlay_enable 0x428
+#define User_overlay_zone0 0x42C
+#define User_overlay_zone1 0x430
+#define User_overlay_zone2 0x434
+#define User_overlay_zone3 0x438
+#define User_define_zone0 0x43C
+#define User_define_zone1 0x440
+#define User_define_zone2 0x444
+#define User_define_zone3 0x448
+#define Slave_mode 0x460
+
+#define Test_Image_Selector 0x800
+#define Pixel_Format 0x804
+#define Sensor_Width 0x808
+#define Sensor_Height 0x80C
+#define MaxFrame_Rate 0x810
+#define Framerate 0x814
+#define ROI_Width 0x818
+#define ROI_Height 0x81C
+#define ROI_Offset_X 0x820
+#define ROI_Offset_Y 0x824
+#define Image_Direction 0x828
+#define Data_shift 0x82C
+#define Black_Level 0x830
+#define ReadOut_Mode 0x834
+#define Lane_Num 0x83C
+#define MIPI_DataRate 0x840
+#define MIN_ROI_Width 0x844
+#define MIN_ROI_Height 0x848U
+
+#define ISP_module_ctrl 0xC00
+#define Exposure_Mode 0xC04
+#define Target_Brightness 0xC08
+#define Exposure_Time_Source 0xC0C
+#define ME_Time 0xC10
+#define AE_MAX_Time 0xC14
+#define Exp_Time 0xC18
+#define Gain_Mode 0xC1C
+#define Manual_Gain 0xC20
+#define AG_Max_Gain 0xC24
+#define Cur_Gain 0xC28
+#define AAROIOffsetX 0xC2C
+#define AAROIOffsetY 0xC30
+#define AAROIWidth 0xC34
+#define AAROIHeight 0xC38
+#define WB_Mode 0xC3C
+#define MWB_Rgain 0xC40
+#define MWB_Bgain 0xC44
+#define AWBROIOffsetX 0xC48
+#define AWBROIOffsetY 0xC4C
+#define AWBROIWidth 0xC50
+#define AWBROIHeight 0xC54
+#define AWB_Rgain 0xC58
+#define AWB_Bgain 0xC5C
+#define Gamma 0xC60
+#define DPC_Start 0xC64
+#define DPC_Status 0xC68
+#define DPC_Count 0xC6C
+#define AAROI_enable 0xC80
+
+#define Trigger_Delay 0x1000
+#define Trigger_Activation 0x1004
+#define Trigger_Filter_Enable 0x1008
+#define Trigger_Filter_Width 0x100C
+#define Trigger_Exp_Delay 0x1010
+#define GPIOIN_Status 0x1014
+
+#define GPIO1_OutSelect 0x1020
+#define GPIO1_Useroutput 0x1024
+#define GPIO1_Reverse 0x1028
+#define GPIO1_OutStatus 0x102C
+
+#define GPIO2_OutSelect 0x1030
+#define GPIO2_Useroutput 0x1034
+#define GPIO2_Reverse 0x1038
+#define GPIO2_OutStatus 0x103C
+/* register ends*/
+
+//#define MVCAM_MAX_CTRLS 40
+
+/* user define v4l2 controls*/
+#define V4L2_CID_VEYE_MV_BASE					(V4L2_CID_USER_BASE + 0x1000)
+#define V4L2_CID_VEYE_MV_TRIGGER_MODE			(V4L2_CID_VEYE_MV_BASE + 1)
+#define V4L2_CID_VEYE_MV_TRIGGER_SRC			(V4L2_CID_VEYE_MV_BASE + 2)
+#define V4L2_CID_VEYE_MV_SOFT_TRGONE			(V4L2_CID_VEYE_MV_BASE + 3)
+
+#define V4L2_CID_VEYE_MV_FRAME_RATE				(V4L2_CID_VEYE_MV_BASE + 4)
+#define V4L2_CID_VEYE_MV_ROI_X		        	(V4L2_CID_VEYE_MV_BASE + 5)
+#define V4L2_CID_VEYE_MV_ROI_Y  				(V4L2_CID_VEYE_MV_BASE + 6)
+
+enum enum_TriggerMode{
+    Image_Continues = 0,
+    Image_Trigger = 1,
+    Image_Speed_Trigger = 2,
+    Image_trigger_mode_num,
+};
+
+enum enum_TriggerSrc{
+    Trg_Soft = 0,
+    Trg_Hard = 1,
+    Trg_Hard_src_num,
+};
+
+#define I2C_READ_RETRY_COUNT 1
+#define I2C_WRITE_RETRY_COUNT 1
+
+/* device id list of mv series */
+#define MV_MIPI_IMX178M 0x0178
+#define MV_MIPI_IMX296M 0x0296
+#define MV_MIPI_SC130M  0x0130
+#define MV_MIPI_IMX265M 0x0265
+#define MV_MIPI_IMX264M 0x0264
+#define MV_MIPI_IMX287M 0x0287
+#define RAW_MIPI_SC132M 0x8132
+#define RAW_MIPI_IMX462M 0x8462
+#define RAW_MIPI_AR0234M 0x8234
+#define RAW_MIPI_SC535M 0x8535
+
+/* MV mipi clk is 1.5Gbps */
+#define MVCAM_DEFAULT_LINK_FREQ     1500000000
+//pixels / second.
+#define MV_CAM_PIXEL_RATE	750000000 //1.5Gbps*2*2/8=750M
+
+#define MV_CAM_H_BLANK_DEFAULT   	128
+
+#define MV_CAM_V_BLANK_MIN   	16
+#define MV_CAM_V_BLANK_DEFAULT  16
+#define MV_CAM_V_BLANK_MAX   	0xFFFFF
+
+#define MV_CAM_EXPOSURE_MIN	1
+#define MV_CAM_EXPOSURE_DEF	0x10
+#define MV_CAM_EXPOSURE_MAX	0xFF
+
+#define MV_CAM_AGAIN_MIN	1
+#define MV_CAM_AGAIN_DEF	0x10
+#define MV_CAM_AGAIN_MAX	0xFF
+
+#define MV_CAM_DEF_FPS      22U
+
+#define MV_IMX178M_ROI_W_MIN    376U
+#define MV_IMX178M_ROI_H_MIN    320U
+#define MV_SC130M_ROI_W_MIN    64U
+#define MV_SC130M_ROI_H_MIN    64U
+#define MV_IMX296M_ROI_W_MIN    80U
+#define MV_IMX296M_ROI_H_MIN    64U
+#define MV_IMX265M_ROI_W_MIN    264U
+#define MV_IMX265M_ROI_H_MIN    64U
+#define MV_IMX264M_ROI_W_MIN    264U
+#define MV_IMX264M_ROI_H_MIN    64U
+#define RAW_SC132M_ROI_W_MIN    64U
+#define RAW_SC132M_ROI_H_MIN    64U
+#define MV_IMX287M_ROI_W_MIN    264U
+#define MV_IMX287M_ROI_H_MIN    64U
+#define RAW_IMX462M_ROI_W_MIN    368U
+#define RAW_IMX462M_ROI_H_MIN    304U
+#define RAW_AR0234M_ROI_W_MIN    64U
+#define RAW_AR0234M_ROI_H_MIN    64U
+#define RAW_SC535M_ROI_W_MIN    64U
+#define RAW_SC535M_ROI_H_MIN    64U
+
+#define MV_CAM_ROI_W_ALIGN  8U
+#define MV_CAM_ROI_H_ALIGN  4U
+
+#define MV_MIPI_DATA_LANS 2
+
+#define IMX178M_PIXEL_RATE_DEFAULT   (288000000)
+#define IMX178M_HMAX_DEFAULT   (4128)
+
+#define IMX287M_PIXEL_RATE_DEFAULT   (222750000)//74.25*3
+
+#define IMX287M_HMAX_DEFAULT_8BIT   (726)
+#define IMX287M_HMAX_DEFAULT_10BIT   (870)
+#define IMX287M_HMAX_DEFAULT   (IMX287M_HMAX_DEFAULT_10BIT)
+
+#define IMX287M_VBLANK_MIN       (42)
+#define IMX287M_VBLANK_MAX       (0xFFFFF)
+#define IMX287M_VBLANK_DEFAULT   (430)
+
+#define IMX264M_PIXEL_RATE_DEFAULT   (197500000)
+#define IMX264M_HMAX_DEFAULT   (2656)
+//IMX296M VMAX = 2088
+
+#define IMX265M_PIXEL_RATE_DEFAULT   (197500000)
+#define IMX265M_HMAX_DEFAULT   (2256)
+//IMX265M VMAX = 1576
+
+#define IMX296M_PIXEL_RATE_10BIT   (147500000)//147.5M
+#define IMX296M_PIXEL_RATE_DEFAULT   (IMX296M_PIXEL_RATE_10BIT)
+
+#define IMX296M_HMAX_DEFAULT_10BIT   (2200)
+#define IMX296M_HMAX_DEFAULT   (IMX296M_HMAX_DEFAULT_10BIT)
+//IMX296M VMAX = 1118
+
+#define SC130M_PIXEL_RATE_8BIT   (396000000)
+#define SC130M_PIXEL_RATE_10BIT   (345600000)
+#define SC130M_PIXEL_RATE_DEFAULT   (SC130M_PIXEL_RATE_10BIT)
+
+#define SC130M_HMAX_DEFAULT_8BIT   (1752)
+#define SC130M_HMAX_DEFAULT_10BIT   (1852)
+#define SC130M_HMAX_DEFAULT   (SC130M_HMAX_DEFAULT_10BIT)
+
+#define SC130M_VBLANK_MIN       (28)
+#define SC130M_VBLANK_MAX       (0x1FFFF)
+#define SC130M_VBLANK_DEFAULT   (704)//108fps
+
+#define SC132M_PIXEL_RATE_DEFAULT   (243000000)
+#define SC132M_HMAX_DEFAULT   (1500)
+
+#define AR0234M_PIXEL_RATE_2LANE   (180000000)
+#define AR0234M_PIXEL_RATE_4LANE   (360000000)
+#define AR0234M_PIXEL_RATE_DEFAULT   (AR0234M_PIXEL_RATE_2LANE)
+
+#define AR0234M_HMAX_DEFAULT_2LANE   (2448)
+#define AR0234M_HMAX_DEFAULT_4LANE   (2448>>1)
+#define AR0234M_HMAX_DEFAULT   (AR0234M_HMAX_DEFAULT_2LANE)
+
+#define IMX462M_PIXEL_RATE_2LANE   (148500000)
+#define IMX462M_PIXEL_RATE_4LANE   (297000000)
+#define IMX462M_PIXEL_RATE_DEFAULT   (IMX462M_PIXEL_RATE_2LANE)
+
+#define IMX462M_HMAX_DEFAULT_2LANE   (2200)
+#define IMX462M_HMAX_DEFAULT_4LANE   (2200>>1)
+#define IMX462M_HMAX_DEFAULT   (IMX462M_HMAX_DEFAULT_2LANE)
+
+#define SC535M_PIXEL_RATE_DEFAULT   (240000000)//240M
+#define SC535M_HMAX_DEFAULT_2LANE_8BIT   (2632)
+#define SC535M_HMAX_DEFAULT_2LANE_10BIT   (2632)
+#define SC535M_HMAX_DEFAULT   (SC535M_HMAX_DEFAULT_2LANE_10BIT)
+
+enum mipi_datatype {
+    IMAGE_DT_YUV420_8 = 0x18,
+	IMAGE_DT_YUV420_10,
+
+	IMAGE_DT_YUV420CSPS_8 = 0x1C,
+	IMAGE_DT_YUV420CSPS_10,
+	IMAGE_DT_YUV422_8,
+	IMAGE_DT_YUV422_10,
+	IMAGE_DT_RGB444,
+	IMAGE_DT_RGB555,
+	IMAGE_DT_RGB565,
+	IMAGE_DT_RGB666,
+	IMAGE_DT_RGB888,
+
+	IMAGE_DT_RAW6 = 0x28,
+	IMAGE_DT_RAW7,
+	IMAGE_DT_RAW8,
+	IMAGE_DT_RAW10,
+	IMAGE_DT_RAW12,
+	IMAGE_DT_RAW14,
+};
+
+enum mv_datatype_index{
+    MV_DT_Mono8 = 0,
+    MV_DT_Mono10 = 1,
+    MV_DT_Mono12 = 2,
+    MV_DT_Mono14 = 3,
+    MV_DT_UYVY = 4,
+};
+
+enum yuv_order {
+	YUV_ORDER_YUYV = 0,
+	YUV_ORDER_YVYU = 1,
+	YUV_ORDER_UYVY = 2,
+	YUV_ORDER_VYUY = 3,
+};
+
+enum bayer_order {
+    //Carefully ordered so that an hflip is ^1,
+    //and a vflip is ^2.
+    BAYER_ORDER_BGGR = 0,
+    BAYER_ORDER_GBRG = 1,
+    BAYER_ORDER_GRBG = 2,
+    BAYER_ORDER_RGGB = 3,
+    BAYER_ORDER_GRAY = 4,
+};
+
+#endif
+
