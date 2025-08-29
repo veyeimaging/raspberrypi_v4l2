@@ -22,6 +22,9 @@
 #include <linux/unaligned.h>
 
 /*
+v1.01.08
+1. Add Pulse_trigger_mode. Fix the bug that camera probe fails when trigger mode is set to 3 in camera.
+
 v1.01.07
 1. support kernel 6.12.y.
 
@@ -37,7 +40,7 @@ version log v1.01.05
 	X is i2c bus number here.
 */
 
-#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x07) 
+#define DRIVER_VERSION			KERNEL_VERSION(1, 0x01, 0x08) 
 /* Embedded metadata stream structure */
 #define VEYE_MV_EMBEDDED_LINE_WIDTH 16384
 #define VEYE_MV_NUM_EMBEDDED_LINES 1
@@ -531,9 +534,9 @@ static struct v4l2_ctrl_config mvcam_v4l2_ctrls[] = {
 		.id = V4L2_CID_VEYE_MV_TRIGGER_MODE,
 		.name = "trigger_mode",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = Image_Continues,
+		.def = Video_Streaming_mode,
 		.min = 0,
-		.max = Image_trigger_mode_num-1,
+		.max = Trigger_mode_num-1,
 		.step = 1,
 		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 	},
