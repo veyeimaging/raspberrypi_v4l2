@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 	}
 
 	
-	i2c_rd(fd, device_addr,reg_addr, &value, num);
+	i2c_rd(fd, device_addr,reg_addr, (uint8_t *)&value, num);
 	
 	close(fd);
 	
