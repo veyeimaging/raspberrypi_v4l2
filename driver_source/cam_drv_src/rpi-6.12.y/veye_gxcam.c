@@ -21,11 +21,16 @@
 #include <linux/unaligned.h>
 
 /*
-	version log v1.0.0
+	v1.0.1:
+	support video mode registers.
+	v1.0.0:
 	first release version
 */
 
-#define DRIVER_VERSION			KERNEL_VERSION(1, 0x00, 0x00) 
+#define DRIVER_VERSION			KERNEL_VERSION(1, 0x00, 0x01) 
+
+#define gxcam_NAME			"gxcam"
+
 /* Embedded metadata stream structure */
 #define VEYE_MV_EMBEDDED_LINE_WIDTH 16384
 #define VEYE_MV_NUM_EMBEDDED_LINES 1
@@ -71,14 +76,14 @@ struct write_regs {
 };
 #pragma pack(pop) 
 
-struct reg_mv {
+struct  reg_gx {
 	u16 addr;
 	u32 val;
 };
 
 struct gxcam_reg_list {
 	unsigned int num_of_regs;
-	const struct reg_mv *regs;
+	const struct  reg_gx *regs;
 };
 
 struct gxcam_format {
@@ -86,20 +91,15 @@ struct gxcam_format {
 	u32 mbus_code;//mbus format
 	u32 data_type;//mv data format
 };
-struct gxcam_roi
-{
-    uint32_t x;
-    uint32_t y;
-    uint32_t width;
-    uint32_t height;
+#define GXCAM_MAX_VIDEO_MODE_NUM 8
+struct gxcam_imgmode {
+    u32 width;
+    u32 height;
+    u32 maxfps;
+    enum enum_ReadOutMode readoutmode;
 };
 
-struct gxcam_mode {
-	u32 width;
-	u32 height;
-};
-
-static const s64 link_freq_menu_items[] = {
+static s64 link_freq_menu_items[] = {
 	GXCAM_DEFAULT_LINK_FREQ,
 };
 /* regulator supplies */
@@ -116,10 +116,6 @@ static const char * const gxcam_supply_name[] = {
 enum enum_v4l2_ctrls_index{
     CID_LINK_FREQ,
     CID_PIXEL_RATE,
-    CID_HBLANK,
-    CID_VBLANK,
-	CID_EXPOSURE,
-	CID_ANALOGUE_GAIN,
 	CID_VEYE_GX_TRIGGER_MODE,
 	CID_VEYE_GX_TRIGGER_SRC,
 	CID_VEYE_GX_SOFT_TRGONE,
@@ -142,14 +138,17 @@ struct gxcam {
 	struct gxcam_format *supported_formats;
 	int num_supported_formats;
 	int current_format_idx;
-    u32 max_width;
-    u32 max_height;
-    u32 min_width;
-    u32 min_height;
-    struct v4l2_rect roi;//the same as roi
-    //max fps @ current roi format
-    u32 max_fps;
+
+	//image mode
+	struct gxcam_imgmode *imgmode_list;
+	int num_imgmodes;
+	int current_imgmode_idx;
+    u32 current_width;
+	u32 current_height;
+
     u32 cur_fps;
+	//image mode
+	struct v4l2_rect crop;
     u32 h_flip;
     u32 v_flip;
     
@@ -158,11 +157,7 @@ struct gxcam {
     u32 mipi_datarate;
 	u8 camera_model[32];
 	u64 pixelrate;
-	u32 hblank;//RO
-	u32 hmax;//RO
-    u32 vblank_lines;
-	u32 exp_val;//just save the value
-	u32 again_val;//just save the value
+	
 	struct v4l2_ctrl_handler ctrl_handler;
     struct v4l2_ctrl *ctrls[GXCAM_MAX_CTRLS];
 	/* V4L2 Controls */
@@ -243,22 +238,12 @@ static int gxcam_readl_reg(struct i2c_client *client,
 	uint8_t buf[3] = {POST_READ_HEAD,  addr >> 8, addr & 0xff };
     uint8_t bufout[8] = {0};
 
-	regs.pre_head = PRE_READ_HEAD;
-	regs.reg = htons(addr);
-	regs.xor = xor8((uint8_t *)&regs, 3);
-	struct i2c_msg msg = {
+	struct i2c_msg  msg = {
 		.addr = client->addr,
 		.flags = 0,
 		.len = sizeof(regs),
 		.buf = (u8 *)&regs,
 	};
-	if (i2c_transfer(client->adapter, &msg, 1) != 1) {
-		v4l2_err(client, "%s: Failed to write register 0x%02x\n",
-			 __func__, addr);
-		return -EIO;
-	}
-	usleep_range(20000, 25000); //20ms
-
 	struct i2c_msg msgs[2] = {
 		{
 			 .addr = client->addr,
@@ -273,6 +258,19 @@ static int gxcam_readl_reg(struct i2c_client *client,
 			.buf = bufout,
 		},
 	};
+
+	regs.pre_head = PRE_READ_HEAD;
+	regs.reg = htons(addr);
+	regs.xor = xor8((uint8_t *)&regs, 3);
+
+	if (i2c_transfer(client->adapter, &msg, 1) != 1) {
+		v4l2_err(client, "%s: Failed to write register 0x%02x\n",
+			 __func__, addr);
+		return -EIO;
+	}
+	usleep_range(20000, 25000); //20ms
+
+
 	if (i2c_transfer(client->adapter, msgs,2) != 2) {
 		return -EIO;
 	}
@@ -290,12 +288,12 @@ static int gxcam_readl_reg(struct i2c_client *client,
 static int gxcam_writel_reg(struct i2c_client *client,
 									u16 addr, u32 val)
 {
-	struct write_regs wr;
-	wr.head = WRITE_HEAD;
-	wr.reg = htons(addr);
-	wr.data = htonl(val);
-	wr.xor = xor8((uint8_t *)&wr, sizeof(wr) - 1);
-
+	struct write_regs wr = {
+		.head = WRITE_HEAD,
+		.reg = htons(addr),
+		.data = htonl(val),
+		.xor = xor8((uint8_t *)&wr, sizeof(wr) - 1),
+	};
 	struct i2c_msg msg = {
 		.addr = client->addr,
 		.flags = 0,
@@ -362,7 +360,7 @@ static int gxcam_write(struct i2c_client *client, u16 addr, u32 value)
 
 /* Write a list of registers */
 static int __maybe_unused  gxcam_write_regs(struct i2c_client *client,
-			     const struct reg_mv *regs, u32 len)
+			     const struct  reg_gx *regs, u32 len)
 {
 	unsigned int i;
 	int ret;
@@ -391,17 +389,15 @@ static u32 bit_count(u32 n)
     return n ;
 }
 
-static int gxcam_getroi(struct gxcam *gxcam)
+static int gxcam_get_wh(struct gxcam *gxcam)
 {
-  //  int ret;
     struct i2c_client *client = gxcam->client;
-    gxcam_read_d(client, ROI_Offset_X,&gxcam->roi.left);
-    gxcam_read_d(client, ROI_Offset_Y,&gxcam->roi.top);
-    gxcam_read_d(client, ROI_Width,&gxcam->roi.width);
-    gxcam_read_d(client, ROI_Height,&gxcam->roi.height);
-    v4l2_dbg(1, debug, gxcam->client, "%s:get roi(%d,%d,%d,%d)\n",
-			 __func__, gxcam->roi.left,gxcam->roi.top,gxcam->roi.width,gxcam->roi.height);
-    return 0;
+    gxcam_read_d(client, ROI_Width,&gxcam->current_width);
+    gxcam_read_d(client, ROI_Height,&gxcam->current_height);
+	//print
+	v4l2_dbg(1, debug, gxcam->client, "%s:get wh(%d,%d)\n",
+				__func__, gxcam->current_width,gxcam->current_height);
+	return 0;
 }
 
 static int gxcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
@@ -413,15 +409,10 @@ static int gxcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
     
 	switch (ctrl->id) {
 	case V4L2_CID_VEYE_GX_TRIGGER_MODE:
-        //ret = gxcam_read_d(client, Trigger_Mode,&ctrl->val);
-		//TODO test
-		ctrl->val = 0;
-		ret = 0;
+        ret = gxcam_read_d(client, Trigger_Mode,&ctrl->val);
 		break;
 	case V4L2_CID_VEYE_GX_TRIGGER_SRC:
-        //ret = gxcam_read_d(client, Trigger_Source,&ctrl->val);
-		ctrl->val = 0;
-		ret = 0;
+        ret = gxcam_read_d(client, Trigger_Source,&ctrl->val);
 		break;
 
 	case V4L2_CID_VEYE_GX_FRAME_RATE:
@@ -430,27 +421,9 @@ static int gxcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
         gxcam->cur_fps = ctrl->val;
 		break;
 	case V4L2_CID_VEYE_GX_SYNC_ROLE:
-		//ret = gxcam_read_d(client, Sync_Role,&ctrl->val);
-		//TODO test
-		ctrl->val = 0;
-		ret = 0;
+		ret = gxcam_read_d(client, Sync_Role,&ctrl->val);
 		break;	
-	case V4L2_CID_HBLANK:
-		ctrl->val = gxcam->hblank;
-		ret = 0;
-		break;
-	case V4L2_CID_VBLANK:
-		ctrl->val = gxcam->vblank_lines;
-		ret = 0;
-		break;
-	case V4L2_CID_EXPOSURE:
-		ctrl->val = gxcam->exp_val;
-		ret = 0;
-		break;
-	case V4L2_CID_ANALOGUE_GAIN:
-		ctrl->val = gxcam->again_val;
-		ret = 0;
-		break;
+
 	default:
 		dev_info(&client->dev,
 			 "gxcam_g_volatile_ctrl ctrl(id:0x%x,val:0x%x) is not handled\n",
@@ -492,22 +465,7 @@ static int gxcam_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_VEYE_GX_SYNC_ROLE:
 		ret = gxcam_write(client, Sync_Role,ctrl->val);
 		break;
-	case V4L2_CID_HBLANK:
-		gxcam->hblank = ctrl->val;
-		ret = 0;
-		break;
-	case V4L2_CID_VBLANK:
-		gxcam->vblank_lines = ctrl->val;
-		ret = 0;
-		break;
-	case V4L2_CID_EXPOSURE:
-		gxcam->exp_val = ctrl->val;
-		ret = 0;
-		break;
-	case V4L2_CID_ANALOGUE_GAIN:
-		gxcam->again_val = ctrl->val;
-		ret = 0;
-		break;
+
 	default:
 		dev_info(&client->dev,
 			 "gxcam_s_ctrl ctrl(id:0x%x,val:0x%x) is not handled\n",
@@ -551,51 +509,7 @@ static struct v4l2_ctrl_config gxcam_v4l2_ctrls[] = {
 		.step = 1,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
 	},
-	{
-		.ops = &gxcam_ctrl_ops,
-		.id = V4L2_CID_HBLANK,
-		.name = NULL,//kernel will fill it
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_CAM_H_BLANK_DEFAULT,
-		.min = MV_CAM_H_BLANK_DEFAULT,
-		.max = MV_CAM_H_BLANK_DEFAULT,
-		.step = 1,
-		.flags = V4L2_CTRL_FLAG_READ_ONLY,
-	},
-	{
-		.ops = &gxcam_ctrl_ops,
-		.id = V4L2_CID_VBLANK,
-		.name = NULL,//kernel will fill it
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_CAM_V_BLANK_DEFAULT,
-		.min = MV_CAM_V_BLANK_MIN,
-		.max = MV_CAM_V_BLANK_MAX,
-		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
-	},
-	{
-		.ops = &gxcam_ctrl_ops,
-		.id = V4L2_CID_EXPOSURE,
-		.name = NULL,//kernel will fill it
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_CAM_EXPOSURE_DEF,
-		.min = MV_CAM_EXPOSURE_MIN,
-		.max = MV_CAM_EXPOSURE_MAX,
-		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
-	},
-	{
-		.ops = &gxcam_ctrl_ops,
-		.id = V4L2_CID_ANALOGUE_GAIN,
-		.name = NULL,//kernel will fill it
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.def = MV_CAM_AGAIN_DEF,
-		.min = MV_CAM_AGAIN_MIN,
-		.max = MV_CAM_AGAIN_MAX,
-		.step = 1,
-		.flags = V4L2_CTRL_FLAG_VOLATILE|V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
-	},
-	
+
 	//custom v4l2-ctrls
 	{
 		.ops = &gxcam_ctrl_ops,
@@ -675,21 +589,17 @@ static void gxcam_v4l2_ctrl_init(struct gxcam *gxcam)
 		switch(gxcam_v4l2_ctrls[i].id)
         {
             case V4L2_CID_VEYE_GX_TRIGGER_MODE:
-                //todo
-				//gxcam_read_d(client, Trigger_Mode,&value);
-				value = 0;
+				gxcam_read_d(client, Trigger_Mode,&value);
                 gxcam_v4l2_ctrls[i].def = value;
                 v4l2_dbg(1, debug, gxcam->client, "%s:default trigger mode %d\n", __func__, value);
             break;
             case V4L2_CID_VEYE_GX_TRIGGER_SRC:
-                //gxcam_read_d(client, Trigger_Source,&value);
-				value = 0;
+                gxcam_read_d(client, Trigger_Source,&value);
                 gxcam_v4l2_ctrls[i].def = value;
                 v4l2_dbg(1, debug, gxcam->client, "%s:default trigger source %d\n", __func__, value);
             break;
 			case V4L2_CID_VEYE_GX_SYNC_ROLE:
-				//gxcam_read_d(client, Sync_Role,&value);
-				value = 0; //default is master
+				gxcam_read_d(client, Sync_Role,&value);
 				gxcam_v4l2_ctrls[i].def = value;
 				v4l2_dbg(1, debug, gxcam->client, "%s:default sync role %d\n", __func__, value);
 			break;
@@ -702,21 +612,6 @@ static void gxcam_v4l2_ctrl_init(struct gxcam *gxcam)
                     gxcam_v4l2_ctrls[i].def,gxcam_v4l2_ctrls[i].max);
             break;
 
-			case V4L2_CID_HBLANK:
-				gxcam_v4l2_ctrls[i].max = gxcam->hblank;
-				gxcam_v4l2_ctrls[i].def = gxcam->hblank;
-				gxcam_v4l2_ctrls[i].min = gxcam->hblank;
-			break;
-			case V4L2_CID_VBLANK:
-				gxcam_v4l2_ctrls[i].max = MV_CAM_V_BLANK_MAX;
-				gxcam->vblank_lines = MV_CAM_V_BLANK_DEFAULT;
-			break;
-			case V4L2_CID_EXPOSURE:
-				gxcam->exp_val = MV_CAM_EXPOSURE_DEF;
-			break;
-			case V4L2_CID_ANALOGUE_GAIN:
-				gxcam->again_val = MV_CAM_AGAIN_DEF;
-			break;
 			case V4L2_CID_PIXEL_RATE:
 				if(gxcam->pixelrate != 0){
 					gxcam_v4l2_ctrls[i].min = gxcam->pixelrate;
@@ -768,26 +663,25 @@ static int gxcam_csi2_enum_framesizes(
 			 __func__, fse->code, fse->index);
 
 	if (fse->pad == IMAGE_PAD) {
-        if (fse->index != 0)
+		if (fse->index >= gxcam->num_imgmodes)
 			return -EINVAL;
-		fse->min_width = fse->max_width =
-			gxcam->roi.width;
-		fse->min_height = fse->max_height =
-			gxcam->roi.height;
-		return 0;
+		if (fse->code == gxcam->supported_formats[gxcam->current_format_idx].mbus_code) {
+			fse->min_width = gxcam->imgmode_list[fse->index].width;
+			fse->max_width = gxcam->imgmode_list[fse->index].width;
+			fse->min_height = gxcam->imgmode_list[fse->index].height;
+			fse->max_height = gxcam->imgmode_list[fse->index].height;
+			return 0;
 		}
+	}
 	 else {
-		if (fse->code != MEDIA_BUS_FMT_SENSOR_DATA || fse->index > 0)
-			return -EINVAL;
-
-		fse->min_width = VEYE_MV_EMBEDDED_LINE_WIDTH;
-		fse->max_width = fse->min_width;
-		fse->min_height = VEYE_MV_NUM_EMBEDDED_LINES;
-		fse->max_height = fse->min_height;
+	 	//meta data
 	}
 
 	return -EINVAL;
 }
+
+
+
 
 static void gxcam_update_metadata_pad_format(struct v4l2_subdev_format *fmt)
 {
@@ -813,13 +707,14 @@ static int gxcam_csi2_get_fmt(struct v4l2_subdev *sd,
     if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
             struct v4l2_mbus_framefmt *try_fmt =
                 v4l2_subdev_state_get_format(sd_state, format->pad);
+			current_format = &gxcam->supported_formats[gxcam->current_format_idx];
             try_fmt->code = format->pad == IMAGE_PAD ? current_format->mbus_code : MEDIA_BUS_FMT_SENSOR_DATA;
             format->format = *try_fmt;
         } else {
     	if (format->pad == IMAGE_PAD) {
     		current_format = &gxcam->supported_formats[gxcam->current_format_idx];
-    		format->format.width = gxcam->roi.width;
-    		format->format.height = gxcam->roi.height;
+    		format->format.width = gxcam->imgmode_list[gxcam->current_imgmode_idx].width;
+    		format->format.height = gxcam->imgmode_list[gxcam->current_imgmode_idx].height;
             
     		format->format.code = current_format->mbus_code;
     		format->format.field = V4L2_FIELD_NONE;
@@ -843,16 +738,36 @@ static int gxcam_csi2_get_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int gxcam_read_sel(struct gxcam *gxcam, struct v4l2_rect *rect) {
+	struct i2c_client *client = gxcam->client;
+	int ret = 0;
+	ret += gxcam_read_d(client, ROI_Offset_X, &rect->left);
+	ret += gxcam_read_d(client, ROI_Offset_Y, &rect->top);
+	ret += gxcam_read_d(client, ROI_Width, &rect->width);
+	ret += gxcam_read_d(client, ROI_Height, &rect->height);
+
+	if (ret || rect->width == 0 
+		|| rect->height == 0) {
+			v4l2_err(client, "%s: Failed to read selection.\n",
+			 	 __func__);
+			return -EINVAL;
+		}
+	return 0;
+}
 static const struct v4l2_rect *
 __gxcam_get_pad_crop(struct gxcam *gxcam,
 		      struct v4l2_subdev_state *sd_state,
 		      unsigned int pad, enum v4l2_subdev_format_whence which)
 {
+	int ret = 0;
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
 		return v4l2_subdev_state_get_crop(sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
-		return &gxcam->roi;
+		ret = gxcam_read_sel(gxcam, &gxcam->crop);
+		if (ret)
+			return NULL;
+        return &gxcam->crop;
 	}
 
 	return NULL;
@@ -877,8 +792,8 @@ static int gxcam_get_selection(struct v4l2_subdev *sd,
         case V4L2_SEL_TGT_CROP_BOUNDS:
             sel->r.top = 0;
             sel->r.left = 0;
-            sel->r.width = gxcam->max_width;
-            sel->r.height = gxcam->max_height;
+            sel->r.width = gxcam->current_width;
+            sel->r.height = gxcam->current_height;
 		break;
         default:
 		return -EINVAL;
@@ -895,21 +810,50 @@ static int gxcam_csi2_set_fmt(struct v4l2_subdev *sd,
 	struct gxcam *gxcam = to_gxcam(sd);
     struct v4l2_mbus_framefmt *framefmt;
     //struct v4l2_subdev_selection sel;
-    
+   // VEYE_TRACE
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
     
 	if (format->pad == IMAGE_PAD) {
-		
-        if ((format->format.width != gxcam->roi.width ||
-		 format->format.height != gxcam->roi.height))
-    	{
-    		v4l2_info(sd, "Changing the resolution is not supported now\n");
-            v4l2_info(sd,"%d,%d,%d,%d\n",format->format.width,gxcam->roi.width,format->format.height,gxcam->roi.height);
-            return -EINVAL;
-    	}
-        
-		//update_controls(gxcam);
+		//	VEYE_TRACE
+			struct gxcam_format *new_format = NULL;
+			int i;
+			/* Find a matching format */
+			for (i = 0; i < gxcam->num_supported_formats; i++) {
+				if (format->format.code ==
+				    gxcam->supported_formats[i].mbus_code) {
+					new_format = &gxcam->supported_formats[i];
+					gxcam->current_format_idx = i;
+					break;
+				}
+			}
+			if (!new_format) {
+				v4l2_err(sd, "%s: Unsupported media bus format 0x%X\n",
+					 __func__, format->format.code);
+
+				return -EINVAL;
+			}
+			/* Update to the new format */
+			gxcam_write(gxcam->client, Pixel_Format,new_format->data_type);
+			//print
+			v4l2_dbg(1, debug, sd, "%s: set Pixel_Format = (0x%X)\n",
+					 __func__, new_format->data_type);
+			//set image mode according to width and height
+			for (i = 0; i < gxcam->num_imgmodes; i++) {
+				if (format->format.width ==
+				    gxcam->imgmode_list[i].width &&
+				    format->format.height ==
+				    gxcam->imgmode_list[i].height) {
+					gxcam->current_imgmode_idx = i;
+					//write registers to set image mode
+					gxcam_write(gxcam->client, Video_Mode,i);
+					break;
+				}
+			}
+			//set roi
+			format->format.code = new_format->mbus_code;
+			format->format.field = V4L2_FIELD_NONE;
+			//update_controls(gxcam);
 	} else {
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
 			framefmt = v4l2_subdev_state_get_format(sd_state,
@@ -946,6 +890,8 @@ static u32 mvdatatype_to_mbus_code(int data_type)
 		return MEDIA_BUS_FMT_Y14_1X14;
 	case MV_DT_UYVY:
 		return MEDIA_BUS_FMT_UYVY8_1X16;
+	case MV_DT_YUYV:
+		return MEDIA_BUS_FMT_YUYV8_1X16;
 	}
 	return 0;
 }
@@ -976,10 +922,7 @@ VEYE_TRACE
     ret = gxcam_read_d(client, Format_cap, &fmtcap);
     if (ret < 0)
 		goto err;
-	//temp by xumm,delete raw 12 support for imx462m now, just for libcamera 
-//	fmtcap &= ~(1<<MV_DT_Mono12);
-//	fmtcap &= ~(1<<MV_DT_UYVY);
-	//end
+
 	num_pixformat = bit_count(fmtcap);
 	if (num_pixformat < 0)
 		goto err;
@@ -1010,9 +953,7 @@ VEYE_TRACE
         index++;
 	}
 	gxcam->num_supported_formats = num_pixformat;
-	//todo
-    //gxcam_read_d(client, Pixel_Format, &cur_fmt);
-	cur_fmt = MV_DT_UYVY;
+    gxcam_read_d(client, Pixel_Format, &cur_fmt);
 	gxcam->current_format_idx = get_fmt_index(gxcam,cur_fmt);
     v4l2_dbg(1, debug, gxcam->client, "%s: cur format: %d\n",
 					__func__, cur_fmt);
@@ -1023,9 +964,59 @@ err:
 	return -ENODEV;
 }
 
+static int gxcam_enum_imgmode(struct gxcam *gxcam)
+{
+	int ret = 0;
+	u32 width_height = 0;
+	u32 frame_rate_param = 0;
+	u32 video_mode_num = 0;
+	int i = 0;
+	struct i2c_client *client = gxcam->client;
+VEYE_TRACE
+	ret = gxcam_read_d(client, VideoModeNum, &video_mode_num);
+	if (ret < 0)
+		goto err;
+	v4l2_dbg(1, debug, gxcam->client, "%s: video mode num %d\n",
+					__func__, video_mode_num);
+	if(video_mode_num > GXCAM_MAX_VIDEO_MODE_NUM)
+		video_mode_num = GXCAM_MAX_VIDEO_MODE_NUM;
+	
+	gxcam->imgmode_list = devm_kzalloc(&client->dev,
+		sizeof(*(gxcam->imgmode_list)) * video_mode_num, GFP_KERNEL);
+	if(!gxcam->imgmode_list)
+		goto err;
+	
+	for(i=0;i<video_mode_num;++i)
+	{
+		gxcam_read_d(client, VidoeMode_WH1 + i*8, &width_height);
+		gxcam_read_d(client, VideoMode_Param1 + i*8, &frame_rate_param);
+		gxcam->imgmode_list[i].width = (width_height >>16) & 0xFFFF;
+		gxcam->imgmode_list[i].height = width_height & 0xFFFF;
+		gxcam->imgmode_list[i].maxfps = frame_rate_param & 0xFFFF;
+		gxcam->imgmode_list[i].readoutmode = (frame_rate_param >>16) & 0xFF;
+		v4l2_dbg(1, debug, gxcam->client, "%s: mode %d: w %d h %d fps %d readout %d\n",
+					__func__, i,
+					gxcam->imgmode_list[i].width,
+					gxcam->imgmode_list[i].height,
+					gxcam->imgmode_list[i].maxfps,
+					gxcam->imgmode_list[i].readoutmode);
+	}
+	gxcam->num_imgmodes = video_mode_num;
+	//current_imgmode_idx是Video_Mode
+	gxcam_read_d(client, Video_Mode, &gxcam->current_imgmode_idx);
+	if(gxcam->current_imgmode_idx >= gxcam->num_imgmodes)
+		gxcam->current_imgmode_idx = 0;
+	v4l2_dbg(1, debug, gxcam->client, "%s: current imgmode idx %d\n",
+					__func__, gxcam->current_imgmode_idx);
+	return 0;
+	err:
+	return -ENODEV;
+}
+
 static void gxcam_get_mipifeature(struct gxcam *gxcam)
 {
     u32 lane_num;
+	u32 lanenum_cap;
     u32 mipi_datarate;
     struct i2c_client *client = gxcam->client;
     gxcam_read_d(client, Lane_Num, &lane_num);
@@ -1034,6 +1025,11 @@ static void gxcam_get_mipifeature(struct gxcam *gxcam)
     }else{
         gxcam->lane_num = 2;
     }
+    gxcam_read(client, LaneNum_Cap, &lanenum_cap);
+	if (lanenum_cap <= 0xF)//
+	{
+		gxcam->lanecap = lanenum_cap;
+	}
     gxcam_read_d(client, MIPI_DataRate, &mipi_datarate);
     if(mipi_datarate == 0xFFFFFFFF)
         mipi_datarate = GXCAM_DEFAULT_LINK_FREQ;
@@ -1042,6 +1038,7 @@ static void gxcam_get_mipifeature(struct gxcam *gxcam)
     
     gxcam->mipi_datarate = mipi_datarate;
     
+	link_freq_menu_items[0] = gxcam->mipi_datarate>>1;//hz is half of datarate
     v4l2_dbg(1, debug, gxcam->client, "%s: lane num %d, datarate %d bps\n",
 					__func__, gxcam->lane_num,gxcam->mipi_datarate);
     return;
@@ -1161,8 +1158,8 @@ static int gxcam_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 //		v4l2_subdev_state_get_format(fh->pad, METADATA_PAD);
     struct v4l2_rect *try_crop;
 	/* Initialize try_fmt */
-	try_fmt->width = gxcam->max_width;
-	try_fmt->height = gxcam->max_height;
+	try_fmt->width = gxcam->imgmode_list[gxcam->current_imgmode_idx].width;
+	try_fmt->height = gxcam->imgmode_list[gxcam->current_imgmode_idx].height;
 	try_fmt->code = gxcam->supported_formats[0].mbus_code;
 	try_fmt->field = V4L2_FIELD_NONE;
 
@@ -1176,8 +1173,8 @@ static int gxcam_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_crop = v4l2_subdev_state_get_crop( fh->state, 0);
 	try_crop->top = 0;
 	try_crop->left = 0;
-	try_crop->width = gxcam->max_width;
-	try_crop->height = gxcam->max_height;
+	try_crop->width = gxcam->imgmode_list[gxcam->current_imgmode_idx].width;
+	try_crop->height = gxcam->imgmode_list[gxcam->current_imgmode_idx].height;
     
 	return 0;
 }
@@ -1201,7 +1198,7 @@ static const struct v4l2_subdev_pad_ops gxcam_pad_ops = {
 	.set_fmt = gxcam_csi2_set_fmt,
 	.enum_frame_size = gxcam_csi2_enum_framesizes,
     .get_selection = gxcam_get_selection,
-	//.set_selection = gxcam_set_selection,//delete it for temp testing
+	//.set_selection = gxcam_set_selection,
 
 	//todo
 	//.get_mbus_config =  //will add lane number setting here
@@ -1420,13 +1417,13 @@ static ssize_t model_show(struct kobject *kobj, struct kobj_attribute *attr, cha
 static ssize_t width_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%d\n", cam->roi.width);
+    return sprintf(buf, "%d\n", cam->current_width);
 }
 
 static ssize_t height_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%d\n", cam->roi.height);
+    return sprintf(buf, "%d\n", cam->current_height);
 }
 
 static ssize_t fps_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
@@ -1496,7 +1493,6 @@ static int gxcam_probe(struct i2c_client *client)
 
 	if (gxcam->reset_gpio) {
 		dev_info(dev, "reset gpio acquired\n");
-		// 如果要看当前电平:
 		dev_info(dev, "reset gpio value = %d\n",
 				 gpiod_get_value_cansleep(gxcam->reset_gpio));
 	} else {
@@ -1519,20 +1515,14 @@ static int gxcam_probe(struct i2c_client *client)
 		ret = -ENODEV;
 		goto error_power_off;
 	}
-	
+	gxcam_enum_imgmode(gxcam);
     gxcam_get_mipifeature(gxcam);
     /* Check the hardware configuration in device tree */
     if(gxcam_check_hwcfg(dev))
 		goto error_power_off; 
     
-    gxcam_read_d(client, Sensor_Width, &gxcam->max_width);
-    gxcam_read_d(client, Sensor_Height, &gxcam->max_height);
-	gxcam_read_d(client, MIN_ROI_Width, &gxcam->min_width);
-	gxcam_read_d(client, MIN_ROI_Height, &gxcam->min_height);
-    v4l2_dbg(1, debug, gxcam->client, "%s: max width %d; max height %d\n",
-					__func__, gxcam->max_width,gxcam->max_height);
     //read roi
-    gxcam_getroi(gxcam);
+    gxcam_get_wh(gxcam);
 
     gxcam_v4l2_ctrl_init(gxcam);
 	if (gxcam_enum_controls(gxcam)) {

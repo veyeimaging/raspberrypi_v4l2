@@ -34,7 +34,7 @@ g_unpacked_supported=0
 g_cm5=0
 
 print_usage() {
-    echo "Usage: $0 veyecam2m/csimx307/cssc132/mvcam -fmt [UYVY/RAW8/RAW10/RAW12] -x [roi_x] -y [roi_y] -w [width] -h [height] -c [cam 0|1]"
+    echo "Usage: $0 veyecam2m/csimx307/cssc132/mvcam/gxcam -fmt [UYVY/RAW8/RAW10/RAW12] -x [roi_x] -y [roi_y] -w [width] -h [height] -c [cam 0|1]"
     echo -e "This shell script is designed to detect the connection of a camera on Raspberry Pi 5. \n
     It utilizes media-ctl and v4l2-ctl commands to configure the linking relationships and data formats of the media pad. \n
     Once completed, you can directly use /dev/video0 or /dev/video8 to obtain image data.\n"
@@ -57,6 +57,10 @@ check_camera_name() {
         mvcam)
             g_camera_name=mvcam
 			g_camera_type="MV_type"
+            ;;
+		gxcam)
+            g_camera_name=gxcam
+			g_camera_type="YUV_type"
             ;;
         *)
             echo "Please provide a correct camera module name!"
@@ -115,7 +119,7 @@ parse_arguments() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      veyecam2m | csimx307 | cssc132 | mvcam)
+      veyecam2m | csimx307 | cssc132 | mvcam | gxcam)
         check_camera_name "$1"
         ;;
       -fmt)
@@ -218,7 +222,7 @@ check_i2c_bus() {
         else
             I2CBUS_CAM1=4
         fi
-        I2CBUS_CAM0=6
+        I2CBUS_CAM1=6
     fi
     echo "Kernel version is $kernel_version, use i2c-$I2CBUS_CAM0 for CAM0 and i2c-$I2CBUS_CAM1 for CAM1."
 }
@@ -242,12 +246,15 @@ probe_camera_entity()
 
 set_camera_entity() 
 {
+    local camera_name="$1"
 	#echo "$g_media_device $g_video_device"
 	media-ctl -d $g_media_device -r
 	#enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
 	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]'
-    v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
-    v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
+    if [ "$camera_name" = "mvcam" ]; then
+        v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
+        v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
+    fi
 	#set media's setting
 	media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-003b':0[fmt:${g_media_fmt}/${g_width}x${g_height} field:none]"
 	#media-ctl -d $g_media_device -V ''\''csi2'\'':0 [fmt:UYVY8_1X16/1920x1080 field:none]'

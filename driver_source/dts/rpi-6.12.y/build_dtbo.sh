@@ -6,4 +6,5 @@ dtc -@ -Hepapr -I dts -O dtb -o veye_vbyone-1500.dtbo veye_vbyone-overlay-1500.d
 dtc -@ -Hepapr -I dts -O dtb -o veye_vbyone-1188.dtbo veye_vbyone-overlay-1188.dts
 dtc -@ -Hepapr -I dts -O dtb -o ds90ub954.dtbo ds90ub954-overlay.dts
 dtc -@ -Hepapr -I dts -O dtb -o veye_mvcam_4lane.dtbo veye_mvcam_4lane-overlay.dts
+dtc -@ -Hepapr -I dts -O dtb -o veye_gxcam.dtbo veye_gxcam-overlay.dts
 
