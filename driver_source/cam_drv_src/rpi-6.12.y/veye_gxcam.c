@@ -219,11 +219,11 @@ static int gxcam_readl_d_reg(struct i2c_client *client,
 
 	checksum = xor8(bufout, 5);
 	if (checksum != bufout[5]) {
-		v4l2_err(client, "%s: Read register 0x%02x checksum error\n",
+		v4l2_err(&client->dev, "%s: Read register 0x%02x checksum error\n",
 			 __func__, addr);
 		return -EIO;
 	}
-	*val = ntohl(*(uint32_t*)bufout);
+	*val = be32_to_cpu(get_unaligned_be32(bufout));
 	//v4l2_dbg(1, debug, client, "%s: 0x%02x 0x%04x\n",
 	//		 __func__, addr, *val);
 	
@@ -264,7 +264,7 @@ static int gxcam_readl_reg(struct i2c_client *client,
 	regs.xor = xor8((uint8_t *)&regs, 3);
 
 	if (i2c_transfer(client->adapter, &msg, 1) != 1) {
-		v4l2_err(client, "%s: Failed to write register 0x%02x\n",
+		v4l2_err(&client->dev, "%s: Failed to write register 0x%02x\n",
 			 __func__, addr);
 		return -EIO;
 	}
@@ -280,7 +280,7 @@ static int gxcam_readl_reg(struct i2c_client *client,
 			 __func__, addr);
 		return -EIO;
 	}
-	*val = ntohl(*(uint32_t*)bufout);
+	*val = be32_to_cpu(get_unaligned_be32(bufout));
 	debug_printk( "gxcam_readl_reg: 0x%02x 0x%04x\n", addr, *val);
 	return 0;
 }
