@@ -81,7 +81,7 @@
 #define VideoMode_Param8 0x00A0
 
 #define Image_Acquisition 0x400
-#define Trigger_Mode 0x404
+#define Work_Mode 0x404
 #define Trigger_Source 0x408
 #define Trigger_Num 0x40C
 #define Trigger_Inerval 0x410
@@ -171,7 +171,7 @@
 
 /* user define v4l2 controls*/
 #define V4L2_CID_VEYE_GX_BASE					(V4L2_CID_USER_BASE + 0x1100)
-#define V4L2_CID_VEYE_GX_TRIGGER_MODE			(V4L2_CID_VEYE_GX_BASE + 1)
+#define V4L2_CID_VEYE_GX_WORK_MODE			    (V4L2_CID_VEYE_GX_BASE + 1)
 #define V4L2_CID_VEYE_GX_TRIGGER_SRC			(V4L2_CID_VEYE_GX_BASE + 2)
 #define V4L2_CID_VEYE_GX_SOFT_TRGONE			(V4L2_CID_VEYE_GX_BASE + 3)
 #define V4L2_CID_VEYE_GX_SYNC_ROLE				(V4L2_CID_VEYE_GX_BASE + 4)
@@ -181,13 +181,13 @@
 //#define V4L2_CID_VEYE_GX_ROI_Y  				(V4L2_CID_VEYE_GX_BASE + 6)
 
 
-enum enum_TriggerMode{
+enum enum_WorkMode{
     Video_Streaming_mode = 0,
     Normal_Trigger_mode = 1,
     Rolling_Shutter_MultiFrame_Trigger_mode = 2,
     Pulse_trigger_mode = 3,
     Sync_mode = 4,
-    Trigger_mode_num,
+    Work_mode_num,
 };
 
 enum enum_TriggerSrc{

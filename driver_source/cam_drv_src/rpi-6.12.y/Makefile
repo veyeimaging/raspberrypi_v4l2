@@ -1,5 +1,5 @@
 KERNEL_ROOT=/lib/modules/$(shell uname -r)/build
-#KERNEL_ROOT=/lib/modules/6.12.25+rpt-rpi-2712/build
+#KERNEL_ROOT=/lib/modules/6.12.47+rpt-rpi-v8/build
 
 PWD=$(shell pwd)
 
