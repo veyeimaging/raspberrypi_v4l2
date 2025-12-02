@@ -272,7 +272,6 @@ static int gxcam_readl_reg(struct i2c_client *client,
 	}
 	usleep_range(20000, 25000); //20ms
 
-
 	if (i2c_transfer(client->adapter, msgs,2) != 2) {
 		return -EIO;
 	}
@@ -401,7 +400,7 @@ static int gxcam_get_wh(struct gxcam *gxcam)
 				__func__, gxcam->current_width,gxcam->current_height);
 	return 0;
 }
-
+//read common registers for v4l2-ctrls
 static int gxcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	int ret;
@@ -411,19 +410,19 @@ static int gxcam_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
     
 	switch (ctrl->id) {
 	case V4L2_CID_VEYE_GX_WORK_MODE:
-        ret = gxcam_read_d(client, Work_Mode,&ctrl->val);
+        ret = gxcam_read(client, Work_Mode,&ctrl->val);
 		break;
 	case V4L2_CID_VEYE_GX_TRIGGER_SRC:
-        ret = gxcam_read_d(client, Trigger_Source,&ctrl->val);
+        ret = gxcam_read(client, Trigger_Source,&ctrl->val);
 		break;
 
 	case V4L2_CID_VEYE_GX_FRAME_RATE:
-        ret = gxcam_read_d(client, Framerate_ex,&ctrl->val);
+        ret = gxcam_read(client, Framerate_ex,&ctrl->val);
         ctrl->val = ctrl->val/10000;
         gxcam->cur_fps = ctrl->val;
 		break;
 	case V4L2_CID_VEYE_GX_SYNC_ROLE:
-		ret = gxcam_read_d(client, Sync_Role,&ctrl->val);
+		ret = gxcam_read(client, Sync_Role,&ctrl->val);
 		break;	
 
 	default:
@@ -1027,7 +1026,7 @@ static void gxcam_get_mipifeature(struct gxcam *gxcam)
     }else{
         gxcam->lane_num = 2;
     }
-    gxcam_read(client, LaneNum_Cap, &lanenum_cap);
+    gxcam_read_d(client, LaneNum_Cap, &lanenum_cap);
 	if (lanenum_cap <= 0xF)//
 	{
 		gxcam->lanecap = lanenum_cap;
