@@ -788,7 +788,7 @@ read_minwh()
     printf "Read MIN_ROI_Width is %d MIN_ROI_Height is %d\n" $width $height;
 }
 
-read_minframerate()
+read_minfps()
 {
     local minframe=0
     minframe=$(i2c_read $MinFrame_Rate)
@@ -805,7 +805,7 @@ read_fps()
     typeset -i value;
 	value=$(i2c_read $FrameRate_Ex);
     fps=$(awk -v x="$value" 'BEGIN {printf "%.4f\n",x/10000}')
-    printf "Read FrameRate_Ex is %.02f fps\n" "$fps";
+    printf "Read FrameRate_Ex is %.04f fps\n" "$fps";
 }
 write_fps()
 {
@@ -1357,13 +1357,13 @@ read_trgdelay()
     local value=0;
     typeset -i value;
 	value=$(i2c_read $Trigger_Delay);
-    printf "Read Trigger_Delay is %d \n" $value;
+    printf "Read Trigger_Delay is %d us\n" $value;
 }
 write_trgdelay()
 {
     local res=$1;
 	i2c_write $Trigger_Delay "$res"
-    printf "Write Trigger_Delay is %d \n" "$res";
+    printf "Write Trigger_Delay is %d us\n" "$res";
 }
 
 read_trgexp_delay()
@@ -1371,13 +1371,13 @@ read_trgexp_delay()
     local value=0;
     typeset -i value;
 	value=$(i2c_read $Exposure_Delay);
-    printf "Read Exposure_Delay is %d \n" $value;
+    printf "Read Exposure_Delay is %d us\n" $value;
 }
 write_trgexp_delay()
 {
     local res=$1;
 	i2c_write $Exposure_Delay "$res"
-    printf "Write Exposure_Delay is %d \n" "$res";
+    printf "Write Exposure_Delay is %d us\n" "$res";
 }
 
 read_outio1_mode()
