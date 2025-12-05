@@ -515,7 +515,7 @@ static struct v4l2_ctrl_config gxcam_v4l2_ctrls[] = {
 	{
 		.ops = &gxcam_ctrl_ops,
 		.id = V4L2_CID_VEYE_GX_WORK_MODE,
-		.name = "trigger_mode",
+		.name = "work_mode",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.def = Video_Streaming_mode,
 		.min = 0,
