@@ -116,7 +116,7 @@ I2C_ADDR=0x3b;
 
 ./gx_mipi_i2c.sh -r minwh
 ./gx_mipi_i2c.sh -r mipidatarate
-./gx_mipi_i2c.sh -r minframerate
+./gx_mipi_i2c.sh -r minfps
 
 ./gx_mipi_i2c.sh -r fps
 ./gx_mipi_i2c.sh -w fps
@@ -124,8 +124,8 @@ I2C_ADDR=0x3b;
 ./gx_mipi_i2c.sh -r expmode
 ./gx_mipi_i2c.sh -w expmode
 
-./gx_mipi_i2c.sh -r aatarget
-./gx_mipi_i2c.sh -w aatarget
+./gx_mipi_i2c.sh -r aetarget
+./gx_mipi_i2c.sh -w aetarget
 
 ./gx_mipi_i2c.sh -r aestrategy
 ./gx_mipi_i2c.sh -w aestrategy
@@ -204,8 +204,8 @@ I2C_ADDR=0x3b;
 ./gx_mipi_i2c.sh -w lsc
 ./gx_mipi_i2c.sh -r lsc
 
-./gx_mipi_i2c.sh -w dehazeparam
-./gx_mipi_i2c.sh -r dehazeparam
+./gx_mipi_i2c.sh -w dehaze
+./gx_mipi_i2c.sh -r dehaze
 
 ./gx_mipi_i2c.sh -w drc
 ./gx_mipi_i2c.sh -r drc
