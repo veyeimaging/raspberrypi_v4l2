@@ -548,7 +548,7 @@ read_board_model()
      if [ $board_model -eq 255 ] ; then
 		printf "Board model is VEYE-MIPI-327 \n";
 	elif [ $board_model -eq 76 ] ; then
-		printf "Board model is VEYE-MIPI-IMX327S\n";
+		printf "Board model is VEYE-MIPI-IMX327S/VEYE-MIPI-IMX462\n";
 	fi
 }
 
