@@ -1350,7 +1350,7 @@ static int gxcam_identify_module(struct gxcam * gxcam)
 		ret = -ENODEV;
 		return ret;
 	}
-	strncpy(gxcam->camera_model, (char *)value, sizeof(gxcam->camera_model));
+	strscpy(gxcam->camera_model, (char *)value, sizeof(gxcam->camera_model));
 
 	dev_info(&client->dev, "camera is: %s\n", gxcam->camera_model);
 
@@ -1412,25 +1412,25 @@ error_out:
 static ssize_t model_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%s\n", cam->camera_model);
+    return sysfs_emit(buf, "%s\n", cam->camera_model);
 }
 
 static ssize_t width_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%d\n", cam->current_width);
+    return sysfs_emit(buf, "%d\n", cam->current_width);
 }
 
 static ssize_t height_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%d\n", cam->current_height);
+    return sysfs_emit(buf, "%d\n", cam->current_height);
 }
 
 static ssize_t fps_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     struct gxcam *cam = container_of(kobj, struct gxcam, kobj);
-    return sprintf(buf, "%d\n", cam->cur_fps);
+    return sysfs_emit(buf, "%d\n", cam->cur_fps);
 }
 
 static struct kobj_attribute model_attribute = __ATTR(camera_model, 0444, model_show, NULL);
