@@ -27,7 +27,7 @@ CameraModel4=0x0048;
 CameraModel5=0x004C;
 CameraModel6=0x0050;
 CameraModel7=0x0054;
-Temp_K=0x0058;
+SensorTempK=0x0058;
 VideoModeCap=0x005C;
 VideoModeNum=0x0060;
 VidoeMode_WH1=0x0064;
@@ -46,6 +46,7 @@ VidoeMode_WH7=0x0094;
 VideoMode_Param7=0x0098;
 VidoeMode_WH8=0x009C;
 VideoMode_Param8=0x00A0;
+ISP_TempK=0x00A4;
 #0x0400
 Image_Acquisition=0x400;
 Work_Mode=0x404;
@@ -64,7 +65,7 @@ Day_night_mode=0x474;
 IRCUT_dir=0x478;
 Day_night_Trigger_pin_polarity=0x47C;
 IRCUT_Timer=0x480;
-
+ReDriver_Reg=0x48C;
 #0x0800
 Test_Image_Selector=0x800;
 Pixel_Format=0x804;
@@ -74,8 +75,8 @@ MaxFrame_Rate=0x810;
 ROI_Width=0x818;
 ROI_Height=0x81C;
 ROI_Offset_X=0x820;
-VideoMode=0x82C;
 ROI_Offset_Y=0x824;
+VideoMode=0x82C;
 Image_Direction=0x828;
 ReadMode=0x838;
 Lane_Num=0x83C;
@@ -84,7 +85,7 @@ MIN_ROI_Width=0x844;
 MIN_ROI_Height=0x848;
 MinFrame_Rate=0x84C;
 FrameRate_Ex=0x850;
-
+MetaData_mode=0x858;
 #0x0c00
 
 Exposure_Mode=0xC04;
@@ -123,6 +124,9 @@ LSC=0xCC8;
 Dehaze_strength=0xCCC;
 Gamma_Selection=0xCD0;
 DRC_strength=0xCD4;
+SCENE_CUSTOM=0xCD8;
+Cur_ISO=0xCDC;
+AE_Weight=0xCE0;
 #0x1000
 Trigger_Delay=0x1000;
 Trigger_Activation=0x1004;
@@ -186,7 +190,7 @@ read_manufacturer()
     case $Manufacturer in
     "1447385413")
         #VEYE
-        printf "Read Manufacturer_Name is VEYE\n";
+        printf "Read Manufacturer_Name is VEYE IMAGING\n";
     ;;
     *)
      printf "Manufacturer %8x not recognized\n" $Manufacturer;
@@ -216,6 +220,24 @@ read_model()
             export MODEL_NAME
             printf "Read Model_Name is GX-MIPI-AR0234\n";
             ;;
+        "34402")
+            #IMX8662
+            MODEL_NAME="GXC-MIPI-IMX662"
+            export MODEL_NAME
+            printf "Read Model_Name is GXC-MIPI-IMX662\n";
+            ;;
+        "34404")
+            #IMX8664
+            MODEL_NAME="GXC-MIPI-IMX664"
+            export MODEL_NAME
+            printf "Read Model_Name is GXC-MIPI-IMX664\n";
+            ;;
+        "33332")
+            #IMX8234
+            MODEL_NAME="GXC-MIPI-AR0234"
+            export MODEL_NAME
+            printf "Read Model_Name is GXC-MIPI-AR0234\n";
+            ;;
         *)
             printf "model 0x%08X not recognized\n" "$model"
             return 1
@@ -239,9 +261,9 @@ read_sensorname()
         #IMX664
         printf "Read Sensor_Name is IMX664-AAQR1\n";
     ;;
-	"564")
-        #ar0234
-        printf "Read Sensor_Name is AR0234-AAQR\n";
+	"33332")
+        #ar8234
+        printf "Read Sensor_Name is AR0234CSSC\n";
     ;;
     *)
      printf " model %8x not recognized\n" $model;
@@ -859,6 +881,19 @@ write_fps()
 	i2c_write $FrameRate_Ex "$reg_value"
     printf "Write FrameRate_Ex is %.04f fps \n" "$fps";
 }
+read_metadata_mode()
+{
+    local value=0;
+    typeset -i value;
+    value=$(i2c_read $MetaData_mode);
+    printf "Read MetaData_mode is %d \n" $value;
+}
+write_metadata_mode()
+{
+    local metadata_mode=$1;
+    i2c_write $MetaData_mode "$metadata_mode"
+    printf "Write MetaData_mode is %d \n" "$metadata_mode";
+}
 
 read_expmode()
 {
@@ -1348,6 +1383,8 @@ read_cameramodel7()
     printf "Read CameraModel7 is 0x%x \n" $cameramodel;
 }
 
+
+
 #read_trgcycle()
 #{
  #   local cycle_min=0;
@@ -1359,23 +1396,38 @@ read_cameramodel7()
  #   printf "Read Trigger_Cycle_Min is %d us,Trigger_Cycle_Max is %d us\n" $cycle_min $cycle_max;
 #}
 
-read_temp()
+read_sensortemp()
 {
-    local value=0
-    local kelvin=0
-    local celsius=0
+    local raw_value=$(i2c_read $SensorTempK)
+  
+    if [ -z "$raw_value" ] || [ "$raw_value" -le 0 ]; then
+        printf "Read SensorTemp: Not Supported (Raw=0)\n"
+        return 1
+    fi
 
-    # Read temperature value, unit is 100 times Kelvin
-    value=$(i2c_read $Temp_K);
+    local result=$(awk "BEGIN {printf \"%.2f %.2f\", $raw_value/100.0, ($raw_value/100.0)-273.15}")
+    
+    local temp_k=$(echo $result | cut -d' ' -f1)
+    local temp_c=$(echo $result | cut -d' ' -f2)
 
-    # Calculate the actual Kelvin temperature
-    kelvin=$(echo "scale=2; $value / 100" | bc);
+    printf "Read SensorTemp: Raw=%d | Temp_K=%s K | Temp_C=%s °C\n" "$raw_value" "$temp_k" "$temp_c"
+}
+read_isptemp()
+{
+   
+    local raw_value=$(i2c_read $ISP_TempK)
+ 
+    if [ -z "$raw_value" ] || [ "$raw_value" -le 0 ]; then
+        printf "Read ISP_Temp: Not Supported or Read Failed (Raw=0)\n"
+        return 1
+    fi
 
-    # Calculate Celsius temperature
-    celsius=$(echo "scale=2; $kelvin - 273.15" | bc);
+    local result=$(awk "BEGIN {printf \"%.2f %.2f\", $raw_value/100.0, ($raw_value/100.0)-273.15}")
+  
+    local temp_k=$(echo $result | cut -d' ' -f1)
+    local temp_c=$(echo $result | cut -d' ' -f2)
 
-    # Print temperature values
-    printf "Read temperature is %.2f K (%.2f \u2103)\n" "$kelvin" "$celsius"
+    printf "Read ISP_Temp: Raw=%d | Temp_K=%s K | Temp_C=%s °C\n" "$raw_value" "$temp_k" "$temp_c"
 }
 
 read_readmodecap()
@@ -1513,6 +1565,55 @@ read_drc()
     printf "Read  DRC_strength is %d   \n" "$drc";
 }
 
+write_scene_custom()
+{
+    local scene=$1;
+    i2c_write $SCENE_CUSTOM "$scene"
+    printf "Write  scene is %d   \n" "$scene";
+}
+
+read_scene_custom()
+{
+    local scene=0;
+    scene=$(i2c_read $SCENE_CUSTOM);
+    printf "Read  scene is %d   \n" "$scene";
+}
+
+read_cur_iso()
+{
+    local iso=0;
+    iso=$(i2c_read $Cur_ISO);
+    printf "Read Cur_ISO is %d \n" $iso;
+}
+
+read_aeweight()
+{
+    local aeweight=0;
+    aeweight=$(i2c_read $AE_Weight);
+    printf "Read AE_Weight is %d \n" $aeweight; 
+}
+
+write_aeweight()
+{
+    local aeweight=$1;
+    i2c_write $AE_Weight "$aeweight"
+    printf "Write  AE_Weight is %d \n" "$aeweight"; 
+}
+
+read_redriver()
+{
+    local redriver=0;
+    redriver=$(i2c_read $ReDriver_Reg);
+    printf "Read ReDriver_Reg is 0x%x \n" $redriver;
+}
+write_redriver()
+{ 
+    local redriver=$1;
+    i2c_write $ReDriver_Reg "$redriver"
+    printf "Write ReDriver_Reg is 0x%x \n" $redriver;
+}
+
+
 #./gx_mipi_i2c.sh -r snsreg <reg_addr> -b <iic_bus>
 read_snsreg() 
 {
@@ -1523,4 +1624,28 @@ read_snsreg()
     value=$(i2c_readsensor "$reg_addr")
 
     printf "Read Sensor Reg $reg_addr, val=0x%x \n" "$value";
+}
+
+
+read_roi()
+{
+    local x=$(i2c_read $ROI_Offset_X)
+    local y=$(i2c_read $ROI_Offset_Y)
+    local width=$(i2c_read $ROI_Width)
+    local height=$(i2c_read $ROI_Height)
+    printf "r roi is x=%d,y=%d,width=%d,height=%d \n" $x $y $width $height;
+}
+write_roi()
+{
+    local offset_x=$1
+    local offset_y=$2
+    local width=$3
+    local height=$4
+    
+   
+    i2c_write $ROI_Offset_X "$offset_x"
+    i2c_write $ROI_Offset_Y "$offset_y"
+    i2c_write $ROI_Width "$width"
+    i2c_write $ROI_Height "$height"
+    printf "w roi is x=%d,y=%d,width=%d,height=%d \n" "$offset_x" "$offset_y" "$width" "$height";
 }

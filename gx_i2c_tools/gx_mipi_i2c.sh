@@ -30,7 +30,7 @@ I2C_ADDR=0x3b;
 ./gx_mipi_i2c.sh -r cameramodel5
 ./gx_mipi_i2c.sh -r cameramodel6
 ./gx_mipi_i2c.sh -r cameramodel7
-./gx_mipi_i2c.sh -r temp
+
 ./gx_mipi_i2c.sh -r videomodecap
 ./gx_mipi_i2c.sh -r videomodenum
 ./gx_mipi_i2c.sh -r videomodewh1
@@ -49,6 +49,9 @@ I2C_ADDR=0x3b;
 ./gx_mipi_i2c.sh -r videomodeparam7
 ./gx_mipi_i2c.sh -r videomodewh8
 ./gx_mipi_i2c.sh -r videomodeparam8
+
+./gx_mipi_i2c.sh -r sensortemp
+./gx_mipi_i2c.sh -r isptemp
 
 ./gx_mipi_i2c.sh -w imgacq
 
@@ -225,6 +228,22 @@ I2C_ADDR=0x3b;
 
 ./gx_mipi_i2c.sh -w outio1_rvs
 ./gx_mipi_i2c.sh -r outio1_rvs
+
+./gx_mipi_i2c.sh -w aeweight
+./gx_mipi_i2c.sh -r aeweight
+
+./gx_mipi_i2c.sh -r cur_iso
+
+./gx_mipi_i2c.sh -w metadata_mode
+./gx_mipi_i2c.sh -r metadata_mode
+
+./gx_mipi_i2c.sh -r redriver
+./gx_mipi_i2c.sh -w redriver
+
+
+./gx_mipi_i2c.sh -w roi x y w h
+./gx_mipi_i2c.sh -r roi
+
 
 COMMENT_SAMPLE
 

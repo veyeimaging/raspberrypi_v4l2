@@ -62,6 +62,15 @@
 #define CameraModel7 0x0054 
 #define Temp_K 0x0058
 #define VideoModeCap 0x005C
+
+/* VideoModeCap bit masks */
+#define GX_VIDEO_MODE_CAP_ROI       (1 << 0)  /* Bit0: ROI mode */
+#define GX_VIDEO_MODE_CAP_PRESET    (1 << 1)  /* Bit1: Preset VideoMode */
+
+/* ROI alignment (same as mvcam) */
+#define GX_CAM_ROI_W_ALIGN  8U
+#define GX_CAM_ROI_H_ALIGN  4U
+
 #define VideoModeNum 0x0060
 #define VidoeMode_WH1 0x0064
 #define VideoMode_Param1 0x0068
@@ -176,9 +185,8 @@
 #define V4L2_CID_VEYE_GX_SOFT_TRGONE			(V4L2_CID_VEYE_GX_BASE + 3)
 #define V4L2_CID_VEYE_GX_SYNC_ROLE				(V4L2_CID_VEYE_GX_BASE + 4)
 #define V4L2_CID_VEYE_GX_FRAME_RATE				(V4L2_CID_VEYE_GX_BASE + 5)
-
-//#define V4L2_CID_VEYE_GX_ROI_X		        	(V4L2_CID_VEYE_GX_BASE + 5)
-//#define V4L2_CID_VEYE_GX_ROI_Y  				(V4L2_CID_VEYE_GX_BASE + 6)
+#define V4L2_CID_VEYE_GX_ROI_X			        	(V4L2_CID_VEYE_GX_BASE + 6)
+#define V4L2_CID_VEYE_GX_ROI_Y						(V4L2_CID_VEYE_GX_BASE + 7)
 
 
 enum enum_WorkMode{
