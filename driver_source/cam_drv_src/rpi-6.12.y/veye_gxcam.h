@@ -108,6 +108,7 @@
 #define User_define_zone1 0x440
 #define User_define_zone2 0x444
 #define User_define_zone3 0x448
+#define Nondiscontinuous_mode 0x44C
 #define Sync_Role 0x460
 
 #define Test_Image_Selector 0x800
