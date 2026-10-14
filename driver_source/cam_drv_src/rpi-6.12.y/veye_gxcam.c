@@ -21,8 +21,6 @@
 #include <linux/unaligned.h>
 
 /*
-	v1.0.4:
-	add delayed task to set Nondiscontinuous_mode for Raspberry Pi.
 	v1.0.3:
 	support both ROI mode and preset VideoMode mode via VideoModeCap register.
 	v1.0.2:
@@ -33,7 +31,7 @@
 	first release version
 */
 
-#define DRIVER_VERSION			KERNEL_VERSION(1, 0x00, 0x04) 
+#define DRIVER_VERSION			KERNEL_VERSION(1, 0x00, 0x03) 
 
 #define gxcam_NAME			"gxcam"
 
@@ -188,9 +186,6 @@ struct gxcam {
 
 	/* Streaming on/off */
 	bool streaming;
-
-	/* Delayed work for Nondiscontinuous_mode */
-	struct delayed_work nondisc_work;
 };
 
 static inline struct gxcam *to_gxcam(struct v4l2_subdev *_sd)
@@ -787,22 +782,6 @@ static void gxcam_v4l2_ctrl_init(struct gxcam *gxcam)
         }
 	}
 }
-static void gxcam_nondisc_work_fn(struct work_struct *work)
-{
-	struct gxcam *gxcam = container_of(work, struct gxcam, nondisc_work.work);
-	struct i2c_client *client = gxcam->client;
-	int ret;
-
-	/* For Raspberry Pi, solve image jitter issue on some PiOS versions */
-	ret = gxcam_write(client, Nondiscontinuous_mode, 1);
-	if (ret)
-		v4l2_err(client, "%s: failed to set Nondiscontinuous_mode\n",
-			 __func__);
-	else
-		v4l2_dbg(1, debug, client,
-			 "%s: Nondiscontinuous_mode set to 1\n", __func__);
-}
-
 static int gxcam_csi2_enum_mbus_code(
 			struct v4l2_subdev *sd,
 			struct v4l2_subdev_state *sd_state,
@@ -1807,14 +1786,9 @@ static int gxcam_probe(struct i2c_client *client)
         goto error_media_entity;
     }
 
-	INIT_DELAYED_WORK(&gxcam->nondisc_work, gxcam_nondisc_work_fn);
-
 	ret = v4l2_async_register_subdev_sensor(&gxcam->sd);
 	if (ret)
 		goto error_media_entity;
-
-	/* Schedule delayed task: set Nondiscontinuous_mode after 6 seconds */
-	schedule_delayed_work(&gxcam->nondisc_work, msecs_to_jiffies(6000));
 
 	return 0;
 
@@ -1839,8 +1813,6 @@ static void gxcam_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct gxcam *gxcam = to_gxcam(sd);
-
-	cancel_delayed_work_sync(&gxcam->nondisc_work);
 
 	v4l2_async_unregister_subdev(sd);
 
